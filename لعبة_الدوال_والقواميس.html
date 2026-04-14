@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 لعبة الدوال والقواميس - الصف العاشر</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Cairo:wght@400;600;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #E8F5E9 0%, #E1F5FE 50%, #FFF3E0 100%);
+            min-height: 100vh;
+            padding: 15px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* خلفية مائية متحركة */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(129, 199, 132, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(129, 212, 250, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 224, 130, 0.2) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(5deg); }
+            66% { transform: translate(-20px, 20px) rotate(-5deg); }
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* رأس الصفحة */
+        .header {
+            background: linear-gradient(135deg, #66BB6A 0%, #43A047 50%, #388E3C 100%);
+            border-radius: 25px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 
+                0 15px 35px rgba(102, 187, 106, 0.3),
+                0 5px 15px rgba(0, 0, 0, 0.1),
+                inset 0 -5px 15px rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+            animation: shine 3s linear infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translate(-50%, -50%); }
+            100% { transform: translate(50%, 50%); }
+        }
+
+        .header h1 {
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.8em;
+            color: white;
+            margin-bottom: 8px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
+            font-weight: 900;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1em;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* لوحة النقاط */
+        .score-board {
+            background: linear-gradient(135deg, #81C784 0%, #66BB6A 100%);
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(129, 199, 132, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-board::before {
+            content: '🐍';
+            position: absolute;
+            font-size: 100px;
+            opacity: 0.1;
+            top: -20px;
+            right: -20px;
+            animation: rotate 10s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .score-item {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .score-label {
+            font-size: 0.85em;
+            color: #1B5E20;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 1.8em;
+            font-weight: 900;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            font-family: 'Cairo', sans-serif;
+        }
+
+        /* بطاقة السؤال */
+        .question-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 
+                0 15px 40px rgba(0, 0, 0, 0.1),
+                0 5px 15px rgba(0, 0, 0, 0.05);
+            border: 5px solid transparent;
+            background-clip: padding-box;
+            position: relative;
+        }
+
+        .question-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 20px;
+            padding: 5px;
+            background: linear-gradient(135deg, #66BB6A, #42A5F5, #FFA726);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            z-index: -1;
+        }
+
+        .question-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #FFA726 0%, #FF9800 100%);
+            color: #E65100;
+            padding: 8px 20px;
+            border-radius: 15px;
+            font-weight: 800;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(255, 167, 38, 0.3);
+        }
+
+        .question-text {
+            font-size: 1.15em;
+            color: #1B5E20;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            font-weight: 600;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .code-snippet {
+            background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+            color: #A5D6A7;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 12px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            direction: ltr;
+            text-align: left;
+            box-shadow: 0 8px 25px rgba(27, 94, 32, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-snippet::before {
+            content: 'Python';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5em;
+            opacity: 0.1;
+            font-weight: bold;
+        }
+
+        .keyword {
+            color: #81C784;
+            font-weight: bold;
+        }
+
+        .variable {
+            color: #64B5F6;
+        }
+
+        .value {
+            color: #FFD54F;
+        }
+
+        /* خيارات الإجابة */
+        .options-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .options-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .option {
+            background: linear-gradient(135deg, #F1F8E9 0%, #DCEDC8 100%);
+            border: 3px solid #AED581;
+            border-radius: 15px;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #33691E;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(129, 199, 132, 0.1), rgba(100, 181, 246, 0.1));
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .option:hover::before {
+            transform: translateX(0);
+        }
+
+        .option:hover {
+            transform: translateY(-3px) scale(1.02);
+            border-color: #66BB6A;
+            box-shadow: 0 10px 30px rgba(129, 199, 132, 0.3);
+        }
+
+        .option.correct {
+            background: linear-gradient(135deg, #81C784 0%, #66BB6A 100%);
+            border-color: #4CAF50;
+            color: white;
+            animation: correctPulse 0.6s ease;
+        }
+
+        .option.wrong {
+            background: linear-gradient(135deg, #EF9A9A 0%, #E57373 100%);
+            border-color: #F44336;
+            color: white;
+            animation: wrongShake 0.6s ease;
+        }
+
+        @keyframes correctPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes wrongShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* أزرار التحكم */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%);
+            color: white;
+        }
+
+        .btn-next:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(102, 187, 106, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* شاشة النتيجة النهائية */
+        .final-screen {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #FFA726 0%, #66BB6A 50%, #42A5F5 100%);
+            border-radius: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .final-screen::before {
+            content: '🎉';
+            position: absolute;
+            font-size: 200px;
+            opacity: 0.1;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: celebrate 2s ease infinite;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
+        }
+
+        .final-screen h2 {
+            font-size: 2.5em;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            font-family: 'Cairo', sans-serif;
+            position: relative;
+            z-index: 1;
+        }
+
+        .final-score {
+            font-size: 4em;
+            font-weight: 900;
+            color: white;
+            margin: 20px 0;
+            text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+            font-family: 'Cairo', sans-serif;
+            position: relative;
+            z-index: 1;
+        }
+
+        .final-message {
+            font-size: 1.5em;
+            color: white;
+            margin-bottom: 30px;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* تأثيرات الجزيئات */
+        .particle {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, #FFA726, #66BB6A);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-float 3s ease-out forwards;
+            z-index: 1000;
+        }
+
+        @keyframes particle-float {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* شخصية كرتونية */
+        .mascot {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 80px;
+            animation: bounce 2s ease-in-out infinite;
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
+            z-index: 100;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .progress-bar-container {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            height: 25px;
+            margin: 15px 0;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #66BB6A, #FFA726);
+            border-radius: 15px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(102, 187, 106, 0.5);
+            font-size: 0.9em;
+        }
+
+        .feedback {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .feedback.correct {
+            background: linear-gradient(135deg, #81C784, #66BB6A);
+            color: #1B5E20;
+            display: block;
+        }
+
+        .feedback.wrong {
+            background: linear-gradient(135deg, #EF9A9A, #E57373);
+            color: #B71C1C;
+            display: block;
+        }
+
+        /* المؤقت */
+        .timer {
+            background: linear-gradient(135deg, #FFA726 0%, #FF9800 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-weight: 800;
+            text-align: center;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(255, 167, 38, 0.3);
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .timer.warning {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF4757 100%);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* معلومات المساعدة */
+        .help-info {
+            background: linear-gradient(135deg, #FFF9C4 0%, #FFE082 100%);
+            border: 3px solid #FFD54F;
+            border-radius: 15px;
+            padding: 12px;
+            margin: 12px 0;
+            font-size: 0.95em;
+            color: #F57F17;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(255, 213, 79, 0.3);
+        }
+
+        /* خطوات الترتيب */
+        .order-step {
+            background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
+            border: 3px solid #81D4FA;
+            border-radius: 15px;
+            padding: 12px;
+            margin: 10px 0;
+            cursor: move;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #01579B;
+            position: relative;
+            user-select: none;
+        }
+
+        .order-step:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+            border-color: #42A5F5;
+        }
+
+        .order-step.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .order-step.correct-order {
+            background: linear-gradient(135deg, #81C784 0%, #66BB6A 100%);
+            border-color: #4CAF50;
+            color: white;
+        }
+
+        .order-step.wrong-order {
+            background: linear-gradient(135deg, #EF9A9A 0%, #E57373 100%);
+            border-color: #F44336;
+            color: white;
+        }
+
+        .drag-icon {
+            display: inline-block;
+            margin-left: 10px;
+            font-size: 1.2em;
+        }
+
+        .order-container {
+            margin: 15px 0;
+        }
+
+        .check-order-btn {
+            background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 12px 30px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 5px 15px rgba(102, 187, 106, 0.3);
+            transition: all 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .check-order-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 187, 106, 0.4);
+        }
+
+        .check-order-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="mascot">🐍</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🎮 لعبة الدوال والقواميس</h1>
+            <p>Python - الصف العاشر 💡</p>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">إعداد المسابقة: وفاء عليان ✨</p>
+        </div>
+
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">النقاط 🌟</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">السؤال 📝</div>
+                <div class="score-value" id="questionCounter">1/6</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">الإجابات الصحيحة ✅</div>
+                <div class="score-value" id="correctAnswers">0</div>
+            </div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar" style="width: 17%">17%</div>
+        </div>
+
+        <div id="gameContainer">
+            <div class="timer" id="timer">⏱️ الوقت المتبقي: 40 ثانية</div>
+            <div class="question-card">
+                <div class="question-number" id="questionNumber">السؤال 1</div>
+                <div class="question-text" id="questionText"></div>
+                <div id="codeContainer"></div>
+                <div class="feedback" id="feedback"></div>
+                <div class="options-container" id="optionsContainer"></div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-next" id="nextBtn" onclick="nextQuestion()" disabled>
+                    السؤال التالي ⬅️
+                </button>
+            </div>
+        </div>
+
+        <div class="final-screen" id="finalScreen">
+            <h2>🎊 أحسنتِ! انتهت اللعبة 🎊</h2>
+            <div class="final-score" id="finalScore"></div>
+            <div class="final-message" id="finalMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                question: 'ما الصيغة الصحيحة إلنشاء قاموس Dictionary يحتوي على بيانات طالب؟',
+                options: [
+                    'student = ["name", "Ahmed", "grade", "Tenth"]',
+                    'student = {"name": "Ahmed", "grade": "Tenth"}',
+                    'student = ("name": "Ahmed", "grade": "Tenth")'
+                ],
+                correct: 1,
+                explanation: '✨ يتم إنشاء Dictionary باستخدام الأقواس المعقوفة { } حيث يتضمن كل عنصر مفتاح Key وقيمة Value'
+            },
+            {
+                question: 'ما التعليمة الصحيحة للوصول إلى عمر الطالب من القاموس؟',
+                codeHTML: 'student = {"name": "Ahmed", "age": 15, "city": "Jahra"}',
+                options: [
+                    'student[age]',
+                    'student["age"]',
+                    'student.age'
+                ],
+                correct: 1,
+                explanation: '✨ للوصول إلى القيمة نستخدم المفتاح بين قوسين مربعين وعلامات تنصيص: student["age"]'
+            },
+            {
+                question: 'ما الدالة المستخدمة لحذف عنصر محدد من Dictionary وإرجاع قيمته؟',
+                codeHTML: 'student = {"name": "Ahmed", "age": 15}<br>student_name = student.<span class="value">_______</span>("name")',
+                options: [
+                    'delete()',
+                    'remove()',
+                    'pop()'
+                ],
+                correct: 2,
+                explanation: '✨ الدالة pop() تحذف عنصر من Dictionary وتُرجع القيمة المرتبطة بالمفتاح بحيث يمكن تخزينها في متغير'
+            },
+            {
+                question: 'ما الدالة المستخدمة لحذف العنصر الأخير من Dictionary؟',
+                options: [
+                    'pop()',
+                    'popitem()',
+                    'clear()'
+                ],
+                correct: 1,
+                explanation: '✨ الدالة popitem() تحذف العنصر الأخير من القاموس (المفتاح والقيمة معاً)'
+            },
+            {
+                question: 'أكملي الفراغ: للتكرار عبر مفاتيح وقيم Dictionary نستخدم الدالة ___',
+                codeHTML: '<span class="keyword">for</span> key, value <span class="keyword">in</span> student.<span class="value">___</span>():<br>    <span class="keyword">print</span>(key, value)',
+                type: 'fill',
+                correctAnswer: 'items',
+                options: ['items', 'keys', 'values'],
+                correct: 0,
+                explanation: '✨ الدالة items() تُرجع كل عنصر على شكل Tuple يحتوي على المفتاح والقيمة المرتبطة به'
+            },
+            {
+                question: 'رتبي خطوات استيراد واستخدام وحدة random لتوليد عدد عشوائي:',
+                helpInfo: '💡 تذكري: نبدأ باستيراد الوحدة، ثم استخدام الدالة المناسبة، وأخيراً طباعة النتيجة',
+                steps: [
+                    '1️⃣ import random',
+                    '2️⃣ random_num = random.randint(1, 10)',
+                    '3️⃣ print(random_num)'
+                ],
+                type: 'order',
+                correctOrder: [0, 1, 2],
+                explanation: '✨ الترتيب الصحيح: أولاً نستورد الوحدة random، ثم نستخدم الدالة randint() لتوليد عدد عشوائي، وأخيراً نطبع النتيجة'
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let correctAnswers = 0;
+        let answered = false;
+        let timeLeft = 40;
+        let timerInterval;
+
+        function loadQuestion() {
+            const q = questions[currentQuestion];
+            document.getElementById('questionNumber').textContent = `السؤال ${currentQuestion + 1}`;
+            document.getElementById('questionText').textContent = q.question;
+            document.getElementById('questionCounter').textContent = `${currentQuestion + 1}/${questions.length}`;
+            
+            // تحديث شريط التقدم
+            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressBar').textContent = Math.round(progress) + '%';
+
+            // إعادة تشغيل المؤقت
+            resetTimer();
+
+            // إضافة الكود إذا كان موجوداً
+            const codeContainer = document.getElementById('codeContainer');
+            if (q.codeHTML) {
+                codeContainer.innerHTML = `<div class="code-snippet">${q.codeHTML}</div>`;
+            } else if (q.code) {
+                codeContainer.innerHTML = `<div class="code-snippet">${q.code.replace(/\n/g, '<br>')}</div>`;
+            } else {
+                codeContainer.innerHTML = '';
+            }
+
+            // إضافة معلومات المساعدة إذا كانت موجودة
+            if (q.helpInfo) {
+                const helpDiv = document.createElement('div');
+                helpDiv.className = 'help-info';
+                helpDiv.textContent = q.helpInfo;
+                codeContainer.insertAdjacentElement('afterend', helpDiv);
+            }
+
+            // إضافة الخيارات
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            if (q.type === 'order') {
+                // سؤال ترتيب
+                optionsContainer.className = 'order-container';
+                const shuffledSteps = [...q.steps].sort(() => Math.random() - 0.5);
+                
+                shuffledSteps.forEach((step, index) => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'order-step';
+                    stepDiv.draggable = true;
+                    stepDiv.innerHTML = step + ' <span class="drag-icon">☰</span>';
+                    stepDiv.dataset.originalIndex = q.steps.indexOf(step);
+                    
+                    stepDiv.addEventListener('dragstart', handleDragStart);
+                    stepDiv.addEventListener('dragover', handleDragOver);
+                    stepDiv.addEventListener('drop', handleDrop);
+                    stepDiv.addEventListener('dragend', handleDragEnd);
+                    
+                    optionsContainer.appendChild(stepDiv);
+                });
+                
+                const checkBtn = document.createElement('button');
+                checkBtn.className = 'check-order-btn';
+                checkBtn.textContent = 'تحقق من الترتيب ✓';
+                checkBtn.onclick = checkOrder;
+                optionsContainer.appendChild(checkBtn);
+                
+            } else {
+                // سؤال اختيار من متعدد عادي
+                optionsContainer.className = 'options-container';
+                q.options.forEach((option, index) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'option';
+                    optionDiv.textContent = option;
+                    optionDiv.onclick = () => selectAnswer(index);
+                    optionsContainer.appendChild(optionDiv);
+                });
+            }
+
+            // إخفاء رسالة التغذية الراجعة
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('feedback').className = 'feedback';
+            
+            answered = false;
+            document.getElementById('nextBtn').disabled = true;
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 40;
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 10) {
+                    document.getElementById('timer').classList.add('warning');
+                } else {
+                    document.getElementById('timer').classList.remove('warning');
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    if (!answered) {
+                        timeUp();
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('timer').textContent = `⏱️ الوقت المتبقي: ${timeLeft} ثانية`;
+        }
+
+        function timeUp() {
+            answered = true;
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = '⏰ انتهى الوقت! حاولي الإجابة بشكل أسرع في المرة القادمة.';
+            feedback.className = 'feedback wrong';
+            feedback.style.display = 'block';
+            
+            const q = questions[currentQuestion];
+            if (q.type !== 'order') {
+                const options = document.querySelectorAll('.option');
+                options[q.correct].classList.add('correct');
+            }
+            
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function selectAnswer(selected) {
+            if (answered) return;
+            
+            clearInterval(timerInterval);
+            answered = true;
+            const q = questions[currentQuestion];
+            const options = document.querySelectorAll('.option');
+            const feedback = document.getElementById('feedback');
+            
+            if (selected === q.correct) {
+                options[selected].classList.add('correct');
+                score += 20;
+                correctAnswers++;
+                createParticles();
+                feedback.textContent = '✅ إجابة صحيحة! ' + q.explanation;
+                feedback.className = 'feedback correct';
+            } else {
+                options[selected].classList.add('wrong');
+                options[q.correct].classList.add('correct');
+                feedback.textContent = '❌ إجابة خاطئة. ' + q.explanation;
+                feedback.className = 'feedback wrong';
+            }
+            
+            feedback.style.display = 'block';
+            document.getElementById('score').textContent = score;
+            document.getElementById('correctAnswers').textContent = correctAnswers;
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (e.target.classList.contains('order-step') && e.target !== draggedElement) {
+                const container = e.target.parentNode;
+                const allSteps = [...container.querySelectorAll('.order-step')];
+                const draggedIndex = allSteps.indexOf(draggedElement);
+                const targetIndex = allSteps.indexOf(e.target);
+                
+                if (draggedIndex < targetIndex) {
+                    e.target.insertAdjacentElement('afterend', draggedElement);
+                } else {
+                    e.target.insertAdjacentElement('beforebegin', draggedElement);
+                }
+            }
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function checkOrder() {
+            if (answered) return;
+            
+            clearInterval(timerInterval);
+            answered = true;
+            
+            const q = questions[currentQuestion];
+            const steps = document.querySelectorAll('.order-step');
+            const currentOrder = Array.from(steps).map(step => parseInt(step.dataset.originalIndex));
+            
+            let isCorrect = true;
+            currentOrder.forEach((order, index) => {
+                if (order === q.correctOrder[index]) {
+                    steps[index].classList.add('correct-order');
+                } else {
+                    steps[index].classList.add('wrong-order');
+                    isCorrect = false;
+                }
+            });
+            
+            const feedback = document.getElementById('feedback');
+            
+            if (isCorrect) {
+                score += 20;
+                correctAnswers++;
+                createParticles();
+                feedback.textContent = '✅ ترتيب صحيح! ' + q.explanation;
+                feedback.className = 'feedback correct';
+            } else {
+                feedback.textContent = '❌ الترتيب غير صحيح. ' + q.explanation;
+                feedback.className = 'feedback wrong';
+            }
+            
+            feedback.style.display = 'block';
+            document.getElementById('score').textContent = score;
+            document.getElementById('correctAnswers').textContent = correctAnswers;
+            document.getElementById('nextBtn').disabled = false;
+            
+            document.querySelector('.check-order-btn').disabled = true;
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            
+            if (currentQuestion < questions.length) {
+                loadQuestion();
+            } else {
+                showFinalScreen();
+            }
+        }
+
+        function showFinalScreen() {
+            clearInterval(timerInterval);
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('finalScreen').style.display = 'block';
+            document.getElementById('finalScore').textContent = `${score}/${questions.length * 20}`;
+            
+            const percentage = (correctAnswers / questions.length) * 100;
+            let message = '';
+            
+            if (percentage === 100) {
+                message = '🏆 ممتاز! أنتِ بطلة! إجاباتك كانت مثالية! 🌟';
+            } else if (percentage >= 80) {
+                message = '🎯 رائع جداً! أداء متميز في Python! 💪';
+            } else if (percentage >= 60) {
+                message = '👍 جيد! يمكنك تحسين أدائك بالمزيد من التدريب! 📚';
+            } else {
+                message = '💡 حاولي مرة أخرى! راجعي الدوال والقواميس في Python! 🐍';
+            }
+            
+            document.getElementById('finalMessage').textContent = message;
+            createCelebration();
+        }
+
+        function createParticles() {
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * window.innerWidth + 'px';
+                particle.style.top = Math.random() * window.innerHeight + 'px';
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 3000);
+            }
+        }
+
+        function createCelebration() {
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * window.innerWidth + 'px';
+                    particle.style.top = Math.random() * window.innerHeight + 'px';
+                    document.body.appendChild(particle);
+                    
+                    setTimeout(() => particle.remove(), 3000);
+                }, i * 50);
+            }
+        }
+
+        // تحميل السؤال الأول عند بدء اللعبة
+        loadQuestion();
+    </script>
+</body>
+</html>

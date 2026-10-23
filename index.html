@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مختبر بايثون التعليمي للفتيات</title>
+  <title>مختبر بايثون التفاعلي</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,64 +11,8 @@
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Pyodide for In-Browser Full Python Execution -->
+  <!-- Pyodide In-Browser Python Engine -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
-
-  <!-- Firebase v11 Module Script for Realtime Live Sync -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Application & Config Setup
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'python-live-lab';
-    let firebaseConfig = {
-      apiKey: "demo-key",
-      authDomain: "demo.firebaseapp.com",
-      projectId: "demo-project"
-    };
-
-    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-      try {
-        firebaseConfig = JSON.parse(__firebase_config);
-      } catch(e) {
-        console.warn("Using default firebase configuration");
-      }
-    }
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // Expose core references and helper dispatchers globally
-    window.LiveSync = {
-      appId,
-      db,
-      auth,
-      doc,
-      setDoc,
-      onSnapshot,
-      collection,
-      isAuthReady: false,
-      currentUnsubTask: null,
-      currentUnsubSubmissions: null
-    };
-
-    // Authenticate First (RULE 3)
-    try {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
-      }
-      window.LiveSync.isAuthReady = true;
-      document.dispatchEvent(new CustomEvent('firebase-auth-ready'));
-    } catch(err) {
-      console.warn("Auth initialization fallback:", err);
-      window.LiveSync.isAuthReady = true;
-      document.dispatchEvent(new CustomEvent('firebase-auth-ready'));
-    }
-  </script>
 
   <!-- Google Font: Cairo & Fira Code -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -77,7 +21,6 @@
 
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -94,8 +37,6 @@
               500: '#f43f5e',
               600: '#e11d48',
               700: '#be123c',
-              800: '#9f1239',
-              900: '#881337',
             }
           }
         }
@@ -106,36 +47,44 @@
   <style>
     body {
       font-family: 'Cairo', sans-serif;
-    }
-    
-    /* Code Editor Container & Overlay */
-    .editor-wrapper {
-      position: relative;
-      background-color: #050505; /* Black screen for Python */
+      -webkit-tap-highlight-color: transparent;
+      font-size: 16px;
     }
 
     .editor-font {
       font-family: 'Fira Code', monospace;
-      font-size: 14px;
-      line-height: 1.6;
+      font-size: 17px;
+      line-height: 1.7;
       tab-size: 4;
       direction: ltr;
       text-align: left;
     }
 
-    /* Transparent textarea on top for typing */
+    /* Support iOS & Mobile keyboards without unexpected auto-scaling */
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+    @media (min-width: 640px) {
+      input, select, textarea {
+        font-size: 15px !important;
+      }
+      .editor-font {
+        font-size: 16px;
+      }
+    }
+
     #pythonCodeArea {
       color: transparent;
-      caret-color: #f43f5e; /* Pink cursor */
+      caret-color: #f43f5e;
       background: transparent;
       z-index: 10;
       white-space: pre;
       overflow-wrap: normal;
       overflow-x: auto;
       resize: none;
+      -webkit-text-fill-color: transparent;
     }
 
-    /* Highlighted display code behind textarea */
     #codeHighlightDisplay {
       position: absolute;
       top: 0;
@@ -146,31 +95,40 @@
       z-index: 1;
       white-space: pre;
       overflow: hidden;
-      color: #f87171; /* Default identifiers / variables: RED */
+      color: #ef4444; /* Default variables / identifiers: Red */
     }
 
-    /* Syntax Highlighting Tokens */
+    /* Python Tokens */
     .token-keyword {
-      color: #facc15 !important; /* Yellow for Keywords & built-ins */
+      color: #facc15 !important; /* Reserved Keywords: Yellow */
       font-weight: 600;
     }
     .token-ident {
-      color: #ef4444 !important; /* Red for variables / identifiers */
+      color: #ef4444 !important; /* Variables: Red */
     }
     .token-string {
-      color: #6ee7b7 !important; /* Mint soft green for strings */
+      color: #6ee7b7 !important; /* Strings: Soft Mint */
     }
+    /* Teacher instructions / comments: Blue background with underline starting with # */
     .token-comment {
-      color: #64748b !important; /* Slate grey for comments */
-      font-style: italic;
+      color: #38bdf8 !important; /* Soft cyan/sky blue */
+      background-color: rgba(30, 58, 138, 0.55) !important; /* Dark blue background */
+      text-decoration: underline !important;
+      text-decoration-color: #60a5fa !important;
+      text-decoration-thickness: 1.5px !important;
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
     }
     .token-number {
-      color: #38bdf8 !important; /* Cyan for numbers */
+      color: #a78bfa !important;
     }
     .token-punctuation {
-      color: #e2e8f0 !important;
+      color: #cbd5e1 !important;
     }
 
+    /* Terminal Output styling */
     .terminal-output {
       font-family: 'Fira Code', monospace;
       direction: ltr;
@@ -179,308 +137,292 @@
       word-break: break-all;
     }
 
-    /* Custom Scrollbar in Pink style */
+    /* Mobile Quick Keys Scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Custom pink scrollbar */
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 5px;
+      height: 5px;
     }
     ::-webkit-scrollbar-track {
       background: #ffe4e6;
     }
     ::-webkit-scrollbar-thumb {
       background: #fb7185;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #e11d48;
+      border-radius: 9999px;
     }
   </style>
 </head>
 <body class="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-100 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-pink-500 selection:text-white">
 
-  <!-- Header with feminine pink accents -->
-  <header class="bg-white/90 backdrop-blur border-b border-pink-200 sticky top-0 z-30 px-4 py-3 shadow-sm">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+  <!-- Header -->
+  <header class="bg-white/95 backdrop-blur border-b border-pink-200 sticky top-0 z-30 px-3 sm:px-4 py-2 sm:py-2.5 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
       
-      <!-- Brand Logo & Title -->
-      <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-bold shadow-lg shadow-pink-500/25">
-          <i class="fa-brands fa-python text-2xl"></i>
+      <!-- Brand (Hidden triple-click trigger for Teacher) -->
+      <div class="flex items-center gap-2 select-none cursor-pointer" id="brandLogoTrigger" title="مختبر بايثون (اضغطي ثلاث مرات لدخول المعلمة)">
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white shadow-md shadow-pink-500/20 active:scale-95 transition">
+          <i class="fa-brands fa-python text-xl sm:text-2xl"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold flex items-center gap-2 text-pink-900">
-            مختبر بايثون الذكي
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 font-bold border border-pink-300">طالبات التميز 🌸</span>
-          </h1>
-          <p class="text-xs text-pink-600 font-medium">بيئة تطبيق بايثون المباشرة بدون الحاجة لتثبيت أي برامج</p>
+          <h1 class="text-base sm:text-xl font-bold text-pink-900 leading-tight">مختبر بايثون 🌸</h1>
+          <p class="text-xs sm:text-sm text-pink-600 font-medium hidden xs:block">بيئة برمجية تفاعلية للفتيات</p>
         </div>
       </div>
 
-      <!-- Actions & Engine Status -->
-      <div class="flex items-center flex-wrap gap-2.5">
-        <!-- Python Engine Status Badge -->
-        <div id="engineStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-pink-100/70 border border-pink-200 text-xs">
-          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" id="engineDot"></span>
-          <span id="engineStatusText" class="text-pink-800 font-semibold">جارٍ تجهيز بايثون...</span>
-        </div>
-
-        <!-- Teacher Dashboard Modal Trigger -->
-        <button id="openTeacherModalBtn" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold transition shadow-md shadow-pink-600/30">
-          <i class="fa-solid fa-chalkboard-user"></i>
-          <span>لوحة المعلمة (إعداد الأسئلة والمتابعة)</span>
+      <!-- Actions -->
+      <div class="flex items-center gap-2">
+        <!-- Lessons Sidebar Toggle Button -->
+        <button id="toggleCurriculumSidebarBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-100 hover:bg-pink-200 text-pink-900 border border-pink-300 text-xs sm:text-sm font-bold transition shadow-sm">
+          <i class="fa-solid fa-book-bookmark text-pink-600"></i>
+          <span>الدروس وأوراق العمل</span>
+          <span id="curriculumStageBadge" class="bg-pink-600 text-white text-[11px] px-2 py-0.5 rounded-full font-mono">عاشر</span>
         </button>
 
-        <!-- Help / Quick Info Modal Trigger -->
-        <button id="openHelpModalBtn" class="p-2 rounded-xl bg-pink-100 hover:bg-pink-200 text-pink-700 transition" title="تعليمات الاستخدام">
-          <i class="fa-regular fa-circle-question text-base"></i>
+        <!-- Engine Status -->
+        <div id="engineStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-pink-100/80 border border-pink-200 text-xs sm:text-sm">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" id="engineDot"></span>
+          <span id="engineStatusText" class="text-pink-900 font-bold text-xs sm:text-sm">جارٍ التحضير...</span>
+        </div>
+
+        <!-- Teacher Active Badge (Shown when a teacher logs in) -->
+        <button id="openTeacherDashboardDirectBtn" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs sm:text-sm font-bold transition shadow-sm animate-pulse">
+          <i class="fa-solid fa-chalkboard-user"></i>
+          <span id="activeTeacherNameLabel" class="hidden sm:inline">لوحة المعلمة</span>
+        </button>
+
+        <button id="teacherLogoutBtn" class="hidden items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs sm:text-sm font-bold transition border border-rose-300">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span class="hidden sm:inline">خروج</span>
         </button>
       </div>
 
     </div>
   </header>
 
-  <!-- Realtime Live Classroom Sync Banner -->
-  <section class="max-w-7xl w-full mx-auto px-4 pt-2.5">
-    <div class="bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 rounded-2xl p-3 text-white shadow-md flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2.5">
-        <span class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white backdrop-blur text-sm">
-          <i class="fa-solid fa-tower-broadcast animate-pulse"></i>
-        </span>
-        <div>
-          <div class="text-xs font-bold flex items-center gap-1.5">
-            <span>البث المباشر للفصل (Live Sync)</span>
-            <span id="liveStatusBadge" class="bg-white/25 text-[10px] px-2 py-0.5 rounded-full font-bold">متصل تلقائياً</span>
-          </div>
-          <p class="text-[11px] text-pink-100 font-medium">كلما كتبت المعلمة سؤالاً وبثته، سيصل إلى جهاز الطالبة مباشرة دون تحديث الصفحة</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <div class="flex items-center bg-white/15 backdrop-blur px-3 py-1.5 rounded-xl border border-white/25">
-          <label for="roomCodeInput" class="text-xs font-bold text-pink-100 ml-2">رمز الغرفة / الفصل:</label>
-          <input type="text" id="roomCodeInput" value="CLASS-1" class="bg-white text-pink-900 font-mono font-bold text-xs uppercase px-2 py-0.5 rounded-lg w-28 text-center outline-none focus:ring-2 focus:ring-pink-300">
-        </div>
-        <button id="connectRoomBtn" class="px-3 py-1.5 rounded-xl bg-white text-pink-700 hover:bg-pink-100 font-bold text-xs shadow-sm transition active:scale-95 flex items-center gap-1">
-          <i class="fa-solid fa-plug"></i>
-          <span>تثبيت الغرفة</span>
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Student Info Bar (Pink Card) -->
-  <section class="max-w-7xl w-full mx-auto px-4 pt-3">
-    <div class="bg-white rounded-2xl border-2 border-pink-200 p-3 sm:p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2 text-pink-700 font-bold text-sm">
-        <span class="w-8 h-8 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600">
-          <i class="fa-solid fa-graduation-cap"></i>
-        </span>
-        <span>بيانات الطالبة:</span>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3 flex-1 max-w-2xl">
-        <!-- Student Name -->
-        <div class="flex-1 min-w-[180px]">
-          <div class="relative">
-            <i class="fa-regular fa-user absolute right-3 top-1/2 -translate-y-1/2 text-pink-400 text-xs"></i>
-            <input type="text" id="studentNameInput" placeholder="اكتبي اسمك الثلاثي هنا..." class="w-full bg-pink-50/60 border border-pink-200 focus:border-pink-500 rounded-xl pr-8 pl-3 py-2 text-xs sm:text-sm text-pink-950 placeholder-pink-300 outline-none transition font-medium">
-          </div>
-        </div>
-
-        <!-- Student Class Selection -->
-        <div class="w-36">
-          <div class="relative">
-            <select id="studentClassSelect" class="w-full bg-pink-50/60 border border-pink-200 focus:border-pink-500 rounded-xl px-3 py-2 text-xs sm:text-sm text-pink-950 font-semibold outline-none transition appearance-none cursor-pointer">
-              <option value="" disabled selected>اختاري الصف...</option>
-              <option value="أول متوسط / 1">أول متوسط / 1</option>
-              <option value="أول متوسط / 2">أول متوسط / 2</option>
-              <option value="أول متوسط / 3">أول متوسط / 3</option>
-              <option value="ثاني متوسط / 1">ثاني متوسط / 1</option>
-              <option value="ثاني متوسط / 2">ثاني متوسط / 2</option>
-              <option value="ثالث متوسط / 1">ثالث متوسط / 1</option>
-              <option value="أول ثانوي / 1">أول ثانوي / 1</option>
-              <option value="أول ثانوي / 2">أول ثانوي / 2</option>
-              <option value="ثاني ثانوي / 1">ثاني ثانوي / 1</option>
-              <option value="ثالث ثانوي / 1">ثالث ثانوي / 1</option>
-            </select>
-            <i class="fa-solid fa-chevron-down absolute left-3 top-1/2 -translate-y-1/2 text-pink-400 text-xs pointer-events-none"></i>
-          </div>
-        </div>
-
-        <!-- Submit to Teacher Button -->
-        <button id="sendToTeacherBtn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-md shadow-pink-500/25 active:scale-95">
-          <i class="fa-solid fa-paper-plane"></i>
-          <span>إرسال الحل للمعلمة 💌</span>
-        </button>
-      </div>
-    </div>
-  </section>
-  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-    <!-- Right Column (In Arabic RTL layout): Mission / Question Details -->
-    <section class="lg:col-span-4 flex flex-col gap-4">
+  <!-- Student Bar (Optimized with Teacher Selector for Multiple Teachers) -->
+  <section class="max-w-7xl w-full mx-auto px-2.5 sm:px-4 pt-2 sm:pt-3 pb-1">
+    <div class="bg-white rounded-2xl border border-pink-200 p-3 sm:p-4 shadow-sm flex flex-col gap-3">
       
-      <!-- Current Exercise Card -->
-      <div class="bg-white rounded-3xl border-2 border-pink-200 p-4 sm:p-5 shadow-sm flex flex-col flex-1">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-pink-900 font-bold text-sm sm:text-base">
+          <i class="fa-solid fa-user-graduate text-pink-500 text-base sm:text-lg"></i>
+          <span>بيانات الطالبة واختيار المعلمة:</span>
+        </div>
+        <span class="text-xs sm:text-sm text-pink-700 bg-pink-100/80 px-3 py-1 rounded-full border border-pink-200 font-bold" id="studentHeaderTeacherIndicator">المعلمة: أ. وفاء عليان</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+        
+        <!-- Teacher Selection for Student -->
+        <div class="sm:col-span-3">
+          <select id="studentTeacherSelect" class="w-full bg-pink-50/70 border border-pink-200 focus:border-pink-500 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-pink-950 font-bold outline-none transition cursor-pointer">
+            <option value="" disabled selected>اختاري معلمتكِ...</option>
+          </select>
+        </div>
+
+        <!-- Stage Select (Independent of teacher) -->
+        <div class="sm:col-span-2">
+          <select id="studentStageSelect" class="w-full bg-pink-50/70 border border-pink-200 focus:border-pink-500 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-pink-950 font-bold outline-none transition cursor-pointer">
+            <option value="" disabled selected>اختاري المرحلة...</option>
+            <option value="العاشر">الصف العاشر</option>
+            <option value="الحادي عشر علمي">الصف الحادي عشر علمي</option>
+            <option value="الحادي عشر أدبي">الصف الحادي عشر أدبي</option>
+          </select>
+        </div>
+
+        <!-- Class Select -->
+        <div class="sm:col-span-2">
+          <select id="studentClassSelect" disabled class="w-full bg-pink-50/70 border border-pink-200 focus:border-pink-500 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-pink-950 font-bold outline-none transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            <option value="" disabled selected>الصف...</option>
+          </select>
+        </div>
+
+        <!-- Student Name -->
+        <div class="sm:col-span-3" id="studentNameWrapper">
+          <input type="text" id="studentNameInput" placeholder="اكتبي اسمكِ الثلاثي..." class="w-full bg-pink-50/60 border border-pink-200 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-pink-950 placeholder-pink-300 outline-none transition font-semibold">
+          <select id="studentNameSelect" class="w-full bg-pink-50/70 border border-pink-200 focus:border-pink-500 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-pink-950 font-bold outline-none transition cursor-pointer hidden">
+            <option value="" disabled selected>اختاري اسمكِ من القائمة...</option>
+          </select>
+        </div>
+
+        <!-- Submit to Selected Teacher Button -->
+        <div class="sm:col-span-2">
+          <button id="submitSolutionBtn" class="w-full py-2.5 px-3 rounded-xl bg-pink-600 hover:bg-pink-700 active:scale-95 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shadow-md shadow-pink-600/20 whitespace-nowrap">
+            <i class="fa-solid fa-paper-plane text-xs sm:text-sm"></i>
+            <span>إرسال لمعلمتي 💌</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Mobile View Switcher (Tabs for smartphone viewports) -->
+  <div class="lg:hidden max-w-7xl w-full mx-auto px-2.5 pt-2">
+    <div class="flex bg-pink-100/70 p-1.5 rounded-2xl border border-pink-200 gap-1.5 text-sm font-bold text-pink-900">
+      <button id="mobileTabQuestion" class="flex-1 py-2 rounded-xl bg-white shadow-sm text-pink-600 flex items-center justify-center gap-1.5 transition">
+        <i class="fa-solid fa-book-open text-sm"></i>
+        <span>السؤال</span>
+      </button>
+      <button id="mobileTabEditor" class="flex-1 py-2 rounded-xl text-slate-600 flex items-center justify-center gap-1.5 transition">
+        <i class="fa-solid fa-code text-sm"></i>
+        <span>كود بايثون</span>
+      </button>
+      <button id="mobileTabTerminal" class="flex-1 py-2 rounded-xl text-slate-600 flex items-center justify-center gap-1.5 transition">
+        <i class="fa-solid fa-terminal text-sm"></i>
+        <span>المخرجات</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Interactive Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
+
+    <!-- Right Side: Question Card -->
+    <section id="questionSectionWrapper" class="lg:col-span-4 flex flex-col gap-3">
+      
+      <div class="bg-white rounded-3xl border border-pink-200 p-4 sm:p-5 shadow-sm flex flex-col flex-1">
+        
+        <!-- Header -->
         <div class="flex items-center justify-between border-b border-pink-100 pb-3 mb-3">
           <div class="flex items-center gap-2">
-            <span class="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-bold shadow-sm">
-              <i class="fa-solid fa-star"></i>
+            <span class="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-bold">
+              <i class="fa-solid fa-code"></i>
             </span>
-            <h2 class="font-bold text-pink-900 text-sm sm:text-base" id="taskTitle">المهمة الأولى: جملة الترحيب</h2>
+            <h2 class="font-bold text-pink-900 text-base sm:text-lg" id="taskTitle">السؤال الحالي</h2>
           </div>
-          <span class="text-xs px-2.5 py-1 rounded-full bg-pink-100 text-pink-700 font-bold" id="taskDifficulty">مبتدئ</span>
+          <span class="text-xs sm:text-sm px-3 py-1 rounded-full bg-pink-100 text-pink-700 font-bold" id="taskTypeBadge">ورقة عمل</span>
         </div>
 
-        <!-- Task Description -->
-        <div class="text-xs sm:text-sm text-slate-700 space-y-3 flex-1 overflow-y-auto max-h-[300px] lg:max-h-none pr-1">
-          <div id="taskDescription" class="leading-relaxed whitespace-pre-line font-medium">
-اكتبي برنامجاً بلغة بايثون يطبع جملة الترحيب:
-`print("Hello, Python!")`
-
-💡 **تلميح:** تأكدي من كتابة الكلمات بالأحرف الصغيرة وتطابق علامات التنصيص.
-          </div>
-
-          <div id="expectedOutputBox" class="mt-4 p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200">
-            <div class="text-xs text-pink-700 font-bold mb-1.5 flex items-center gap-1.5">
-              <i class="fa-solid fa-circle-check text-pink-500"></i>
-              المخرجات المطلوبة لاجتياز التحدي:
-            </div>
-            <code id="expectedOutputText" class="text-xs text-rose-700 font-mono font-bold block direction-ltr text-left">Hello, Python!</code>
-          </div>
-        </div>
-
-        <!-- Quick Template / Clear Solution Buttons -->
-        <div class="pt-3 mt-3 border-t border-pink-100 flex items-center gap-2">
-          <button id="loadStarterCodeBtn" class="flex-1 py-2 px-3 rounded-xl bg-pink-100 hover:bg-pink-200 text-pink-800 text-xs font-bold transition flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-rotate-left"></i>
-            استعادة السؤال
+        <!-- Task Mode Selector (محلول من الكتاب / تمرين تطبيقي غير محلول) -->
+        <div class="flex bg-pink-100/70 p-1 rounded-2xl gap-1 mb-2.5 text-xs font-bold" id="taskModeToggleContainer">
+          <button id="btnModeSolution" class="flex-1 py-1.5 px-2 rounded-xl bg-white text-pink-800 shadow-sm transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-book-open text-pink-600"></i>
+            <span>ورقة العمل (مع الحل والنتيجة)</span>
           </button>
-          <button id="checkSolutionBtn" class="flex-1 py-2 px-3 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-pink-600/20">
+          <button id="btnModePractice" class="flex-1 py-1.5 px-2 rounded-xl text-pink-700 hover:bg-white/50 transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-pen-fancy text-pink-600"></i>
+            <span>تمرين إضافي غير محلول ✏️</span>
+          </button>
+        </div>
+
+        <!-- Question Body -->
+        <div class="text-sm sm:text-base text-slate-700 space-y-2 flex-1 overflow-y-auto max-h-[180px] sm:max-h-[220px] lg:max-h-none leading-relaxed font-semibold" id="taskDescription">
+          اكتبي برنامجاً يطبع جملة الترحيب:
+          `print("Hello, Python!")`
+        </div>
+
+        <!-- Expected Output (if any) -->
+        <div id="expectedOutputBox" class="mt-3 p-3 rounded-2xl bg-pink-50/70 border border-pink-200">
+          <div class="text-xs sm:text-sm text-pink-700 font-bold mb-1.5 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-square-poll-vertical"></i> نتيجة التنفيذ المطلوبة:</span>
+            <span class="text-xs bg-pink-200/80 text-pink-900 px-2.5 py-0.5 rounded-full font-bold">تصحيح ذكي 🧠</span>
+          </div>
+          <code id="expectedOutputText" class="text-sm sm:text-base text-rose-700 font-mono font-bold block direction-ltr text-left">Hello, Python!</code>
+        </div>
+
+        <!-- Reset & Check Buttons -->
+        <div class="pt-3 mt-3 border-t border-pink-100 flex flex-col sm:flex-row items-center gap-2">
+          <button id="testSolutionBtn" class="w-full sm:w-1/2 py-2.5 px-3 rounded-xl bg-pink-600 hover:bg-pink-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
             <i class="fa-solid fa-circle-check"></i>
-            تحقق من حلي
+            تصحيح إجابتي الآن
+          </button>
+          <button id="resetCodeBtn" class="w-full sm:w-1/2 py-2.5 px-3 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border border-pink-200">
+            <i class="fa-solid fa-rotate-left"></i>
+            استعادة الكود الأصلي
           </button>
         </div>
 
-        <!-- Feedback alert placeholder -->
-        <div id="feedbackAlert" class="mt-3 p-3 rounded-xl hidden text-xs transition duration-200 font-medium"></div>
+        <!-- Alert Notification for Submission / Check -->
+        <div id="submissionNotice" class="mt-2.5 p-3 rounded-xl hidden text-xs sm:text-sm font-bold text-center transition"></div>
+
       </div>
 
-      <!-- Quick Syntax Cheat Sheet -->
-      <div class="bg-white rounded-3xl border-2 border-pink-200 p-4 shadow-sm">
-        <h3 class="text-xs font-bold text-pink-800 mb-2.5 flex items-center gap-2">
-          <i class="fa-solid fa-palette text-pink-500"></i>
-          دليل الألوان في شاشة بايثون:
-        </h3>
-        <div class="space-y-1.5 text-[11px] mb-3 p-2 rounded-xl bg-slate-900 text-white font-mono">
-          <div class="flex items-center justify-between">
-            <span class="text-yellow-400 font-bold">الكلمات المحجوزة (Keywords)</span>
-            <span class="text-yellow-400 font-bold">أصفر (Yellow)</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-red-400 font-bold">المتغيرات والأسماء (Variables)</span>
-            <span class="text-red-400 font-bold">أحمر (Red)</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-emerald-300 font-medium">النصوص (Strings)</span>
-            <span class="text-emerald-300 font-medium">أخضر هادئ</span>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 text-[11px]">
-          <button class="snippet-btn p-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 text-right transition font-medium" data-snippet='print("مرحباً بك!")'>
-            <code>print()</code> : طباعة نص
-          </button>
-          <button class="snippet-btn p-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 text-right transition font-medium" data-snippet='name = input("ما اسمك؟ ")&#10;print(f"أهلاً {name}")'>
-            <code>input()</code> : إدخال مستخدم
-          </button>
-          <button class="snippet-btn p-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 text-right transition font-medium" data-snippet='if 5 > 2:&#10;    print("صحيح")'>
-            <code>if / else</code> : جملة شرطية
-          </button>
-          <button class="snippet-btn p-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 text-right transition font-medium" data-snippet='for i in range(1, 6):&#10;    print(i)'>
-            <code>for loop</code> : تكرار
-          </button>
+      <!-- Quick Syntax Legend -->
+      <div class="bg-white rounded-2xl border border-pink-200 p-3 shadow-sm text-xs sm:text-sm">
+        <span class="font-bold text-pink-900 block mb-1.5">دليل الألوان البرمجية:</span>
+        <div class="grid grid-cols-3 gap-2 text-center font-mono">
+          <span class="p-1.5 rounded-lg bg-black text-yellow-400 font-bold text-xs">الكلمات المحجوزة</span>
+          <span class="p-1.5 rounded-lg bg-black text-red-400 font-bold text-xs">المتغيرات</span>
+          <span class="p-1.5 rounded-lg bg-black text-sky-400 underline decoration-blue-400 font-bold text-xs"># أسئلة المعلمة</span>
         </div>
       </div>
 
     </section>
-    <!-- Python Playground Column (Strictly Pure Black Background) -->
-    <section class="lg:col-span-8 flex flex-col gap-4">
+
+    <!-- Left Side: Pure Black Python Screen & Terminal -->
+    <section id="editorSectionWrapper" class="lg:col-span-8 flex flex-col gap-3">
       
-      <!-- Editor Card (Pure Black Inner Screen) -->
-      <div class="bg-black rounded-3xl border-2 border-pink-300 overflow-hidden shadow-xl flex flex-col flex-1">
+      <!-- Python Editor -->
+      <div class="bg-black rounded-3xl border-2 border-pink-300 overflow-hidden shadow-md flex flex-col flex-1 min-h-[320px] sm:min-h-[380px]">
         
-        <!-- Editor Header Toolbar -->
-        <div class="bg-zinc-950 border-b border-zinc-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <!-- Editor Bar -->
+        <div class="bg-zinc-950 border-b border-zinc-800 px-3.5 py-2.5 flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">
-            <span class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-pink-950/80 text-pink-400 text-xs font-mono border border-pink-800">
-              <i class="fa-solid fa-code"></i> main.py
+            <span class="px-2.5 py-1 rounded-lg bg-pink-950 text-pink-300 text-xs sm:text-sm font-mono border border-pink-800 font-bold">
+              main.py
             </span>
-            <span class="text-xs text-zinc-400 hidden sm:inline font-mono">Python 3.11 Runtime</span>
           </div>
 
           <div class="flex items-center gap-2">
-            <!-- Run Code Button -->
-            <button id="runCodeBtn" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs sm:text-sm transition shadow-lg shadow-pink-600/40 active:scale-95 disabled:opacity-50">
-              <i class="fa-solid fa-play"></i>
+            <button id="runCodeBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-sm disabled:opacity-50">
+              <i class="fa-solid fa-play text-xs sm:text-sm"></i>
               <span>تشغيل الكود (Run)</span>
             </button>
-            
-            <!-- Clear Editor Button -->
-            <button id="clearEditorBtn" class="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition" title="مسح المحرر">
-              <i class="fa-regular fa-trash-can text-xs"></i>
-            </button>
-
-            <!-- Copy Code Button -->
-            <button id="copyCodeBtn" class="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition" title="نسخ الكود">
-              <i class="fa-regular fa-copy text-xs"></i>
+            <button id="clearEditorBtn" class="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition text-xs sm:text-sm" title="مسح الكود">
+              <i class="fa-regular fa-trash-can"></i>
             </button>
           </div>
         </div>
 
-        <!-- Pure Black Editor Area Container with Syntax Highlighting -->
-        <div class="relative flex flex-1 min-h-[290px] bg-black">
-          
-          <!-- Line Numbers Column (Black/Dark Zinc) -->
-          <div id="lineNumbers" class="text-zinc-600 select-none bg-black border-r border-zinc-900 px-3 py-3 text-right text-xs font-mono leading-[1.6]">
+        <!-- Quick Code Toolbar for Mobile Screen -->
+        <div class="bg-zinc-900/90 border-b border-zinc-800 px-2.5 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar direction-ltr select-none">
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-pink-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="    ">Tab ⇥</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-yellow-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert=":">:</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-emerald-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert='""'>""</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-emerald-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="''">''</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-sky-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="()">()</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-sky-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="[]">[]</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-sky-400 font-mono text-sm font-bold transition flex-shrink-0" data-insert="# ">#</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-purple-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="=">=</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-purple-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="==">==</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-purple-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="+">+</button>
+          <button type="button" class="quick-key-btn px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-pink-600 hover:bg-zinc-700 text-amber-300 font-mono text-sm font-bold transition flex-shrink-0" data-insert="print()">print()</button>
+        </div>
+
+        <!-- Coding Area -->
+        <div class="relative flex flex-1 min-h-[240px] bg-black">
+          <div id="lineNumbers" class="text-zinc-600 select-none bg-black border-r border-zinc-900 px-3 sm:px-4 py-3 text-right text-sm sm:text-base font-mono leading-[1.7]">
             1
           </div>
-          
-          <!-- Code Highlighting Layer + Input Overlay -->
-          <div class="editor-wrapper relative flex-1">
-            <!-- Display element with syntax colors (Yellow Keywords, Red Variables) -->
-            <pre id="codeHighlightDisplay" class="editor-font p-3 m-0 overflow-auto"></pre>
-            
-            <!-- Transparent Textarea for User Typing -->
-            <textarea id="pythonCodeArea" class="editor-font absolute inset-0 w-full h-full p-3 outline-none border-none focus:ring-0" placeholder="# اكتبي كود بايثون هنا..." spellcheck="false"></textarea>
+          <div class="relative flex-1">
+            <pre id="codeHighlightDisplay" class="editor-font p-3 sm:p-4 m-0"></pre>
+            <textarea id="pythonCodeArea" class="editor-font absolute inset-0 w-full h-full p-3 sm:p-4 outline-none border-none focus:ring-0" placeholder="# اكتبي كود بايثون هنا..." spellcheck="false" autocorrect="off" autocapitalize="none" autocomplete="off"></textarea>
           </div>
         </div>
 
       </div>
 
-      <!-- Black Terminal / Output Console -->
-      <div class="bg-black rounded-3xl border-2 border-pink-300 overflow-hidden shadow-xl flex flex-col h-[270px]">
+      <!-- Black Terminal Console -->
+      <div id="terminalSectionWrapper" class="bg-black rounded-3xl border-2 border-pink-300 overflow-hidden shadow-md flex flex-col h-[200px] sm:h-[220px]">
         
-        <div class="bg-zinc-950 border-b border-zinc-800 px-4 py-2 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-full bg-pink-500"></span>
-              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-              <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-            </div>
-            <span class="text-xs text-zinc-400 font-mono font-medium ml-2">Python Terminal / مخرجات الشاشة السوداء</span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button id="clearConsoleBtn" class="text-xs text-zinc-400 hover:text-zinc-200 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 transition">
-              <i class="fa-solid fa-eraser"></i> مسح المخرجات
-            </button>
-          </div>
+        <div class="bg-zinc-950 border-b border-zinc-800 px-3.5 py-2 flex items-center justify-between">
+          <span class="text-xs sm:text-sm text-zinc-400 font-mono font-bold">شاشة المخرجات (Output Terminal)</span>
+          <button id="clearConsoleBtn" class="text-xs text-zinc-300 hover:text-white px-2.5 py-1 rounded bg-zinc-900 font-bold transition">
+            مسح
+          </button>
         </div>
 
-        <!-- Terminal Output View -->
-        <div id="terminalScreen" class="terminal-output flex-1 p-3.5 overflow-y-auto text-xs text-zinc-200 space-y-1 bg-black">
-          <span class="text-zinc-500 font-mono block"># جاهز للتشغيل. ستظهر مخرجات بايثون هنا فور النقر على "تشغيل الكود"...</span>
+        <div id="terminalScreen" class="terminal-output flex-1 p-3.5 overflow-y-auto text-xs sm:text-sm text-zinc-200 bg-black">
+          <span class="text-zinc-500 font-mono"># انقري على "تشغيل الكود" لتظهر النتيجة هنا...</span>
         </div>
 
       </div>
@@ -488,373 +430,677 @@
     </section>
 
   </main>
-  <!-- Student Submission Modal (Send to Teacher) -->
-  <div id="submissionModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white border-2 border-pink-300 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative">
-      
-      <button id="closeSubmissionModalBtn" class="absolute top-5 left-5 text-pink-400 hover:text-pink-600 p-2 rounded-xl bg-pink-50">
+
+  <!-- Teacher Login Modal -->
+  <div id="teacherLoginModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white border-2 border-pink-300 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-center">
+      <button id="closeTeacherLoginModalBtn" class="absolute top-4 left-4 text-pink-400 hover:text-pink-600">
         <i class="fa-solid fa-xmark text-lg"></i>
       </button>
 
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-12 h-12 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center text-xl shadow-sm">
-          <i class="fa-solid fa-paper-plane"></i>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold text-pink-900">إرسال الحل إلى المعلمة 🌸</h3>
-          <p class="text-xs text-pink-600">اختاري الطريقة المناسبة لإيصال إجابتك للمعلمة</p>
-        </div>
+      <div class="w-12 h-12 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center text-xl mx-auto mb-2">
+        <i class="fa-solid fa-user-shield"></i>
       </div>
 
-      <!-- Submission Preview Info -->
-      <div class="bg-pink-50 rounded-2xl p-3 border border-pink-200 text-xs space-y-1.5 mb-4 text-pink-950 font-medium">
-        <div><strong>اسم الطالبة:</strong> <span id="modalStudentName" class="text-pink-700 font-bold"></span></div>
-        <div><strong>الصف:</strong> <span id="modalStudentClass" class="text-pink-700 font-bold"></span></div>
-        <div><strong>المهمة:</strong> <span id="modalTaskTitle" class="text-pink-700 font-bold"></span></div>
+      <h3 class="text-base font-bold text-pink-900 mb-1">دخول المعلمة</h3>
+      <p class="text-[11px] text-pink-500 mb-3">أدخلي رمز المرور السري الخاص بكِ للوصول لفصولكِ</p>
+
+      <div class="relative mb-2">
+        <input 
+          type="password" 
+          id="teacherPinInput" 
+          placeholder="••••" 
+          autocomplete="off"
+          class="w-full text-center tracking-[0.5em] text-lg font-mono bg-pink-50 border border-pink-200 focus:border-pink-500 rounded-xl py-2 px-3 outline-none font-bold text-slate-800" 
+          maxlength="8">
       </div>
-
-      <!-- Action Options -->
-      <div class="space-y-3">
-        <!-- WhatsApp Send Option -->
-        <a id="whatsappSubmitBtn" href="#" target="_blank" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition">
-          <i class="fa-brands fa-whatsapp text-lg"></i>
-          <span>إرسال الحل مباشرة عبر واتساب</span>
-        </a>
-
-        <!-- Copy Solution Report -->
-        <button id="copySubmissionReportBtn" class="w-full py-3 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition">
-          <i class="fa-regular fa-clipboard text-base"></i>
-          <span>نسخ تقرير الحل بالكامل (للإرسال عبر Teams أو منصة مدرستي)</span>
-        </button>
-
-        <div id="copyReportSuccess" class="text-center text-xs text-pink-600 font-bold hidden">
-          <i class="fa-solid fa-check"></i> تم نسخ التقرير والكود البرمجي بنجاح!
-        </div>
+      
+      <div id="loginErrorMsg" class="text-rose-600 text-xs font-bold hidden mb-2">
+        رمز المرور غير صحيح!
       </div>
+      <button id="submitTeacherLoginBtn" class="w-full py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs sm:text-sm shadow-sm transition">
+        تأكيد الدخول
+      </button>
 
+      <div class="mt-4 pt-3 border-t border-pink-100 text-xs text-pink-600 text-right space-y-1.5 font-sans">
+        <div class="font-bold text-pink-800">🔑 رموز الدخول الخاصة بالمعلمات:</div>
+        <div>• أ. وفاء عليان: <span class="font-mono font-bold text-pink-700 bg-pink-100 px-1.5 py-0.5 rounded">1010</span></div>
+        <div>• أ. فاطمة المطيري: <span class="font-mono font-bold text-pink-700 bg-pink-100 px-1.5 py-0.5 rounded">2020</span></div>
+        <div>• أ. شوق بو عباس: <span class="font-mono font-bold text-pink-700 bg-pink-100 px-1.5 py-0.5 rounded">3030</span></div>
+        <div>• أ. نوف الجهيم: <span class="font-mono font-bold text-pink-700 bg-pink-100 px-1.5 py-0.5 rounded">4040</span></div>
+      </div>
     </div>
   </div>
 
-  <!-- Teacher Modal (Create Task + Submissions Hub) -->
-  <div id="teacherModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white border-2 border-pink-300 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+  <!-- Teacher Dashboard Modal -->
+  <div id="teacherDashboardModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white border-2 border-pink-300 rounded-3xl max-w-3xl w-full p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
       
-      <button id="closeTeacherModalBtn" class="absolute top-5 left-5 text-pink-400 hover:text-pink-600 p-2 rounded-xl bg-pink-50">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-12 h-12 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center text-xl shadow-sm">
-          <i class="fa-solid fa-chalkboard-user"></i>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold text-pink-900">لوحة تحكم المعلمة: إعداد التحديات ومشاركتها</h3>
-          <p class="text-xs text-pink-600 font-medium">بث السؤال للطالبات مباشرة أو متابعة إجاباتهن لحظة بلحظة</p>
-        </div>
-      </div>
-
-      <!-- Live Broadcast Classroom Code -->
-      <div class="bg-pink-50 p-3 rounded-2xl border border-pink-200 flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div class="flex items-center justify-between border-b border-pink-100 pb-3 mb-4">
         <div class="flex items-center gap-2">
-          <i class="fa-solid fa-signal text-pink-600 text-sm"></i>
-          <span class="text-xs font-bold text-pink-900">رمز الغرفة للبث المباشر:</span>
-          <span id="teacherCurrentRoomDisplay" class="px-2 py-0.5 rounded-lg bg-pink-200 text-pink-900 font-mono font-bold text-xs">CLASS-1</span>
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-lg shadow-sm">
+            <i class="fa-solid fa-chalkboard-user"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-pink-900 flex items-center gap-1.5">
+              <span>لوحة المعلمة:</span>
+              <span id="currentTeacherProfileName" class="text-pink-600">أ. سارة</span>
+            </h3>
+            <p class="text-xs text-pink-500 font-semibold" id="currentTeacherStagesTag">نظام متابعة وتقييم الطالبات</p>
+          </div>
         </div>
-        <div class="text-[11px] text-pink-700">
-          <i class="fa-solid fa-circle-info"></i>
-          تأكدي أن الطالبات يضعن نفس الرمز في الشريط العلوي لتصلهن أسئلتك فوراً.
-        </div>
+        <button id="closeTeacherDashboardBtn" class="text-pink-400 hover:text-pink-600 p-1.5 rounded-xl bg-pink-50">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
       </div>
 
-      <!-- Presets for Teachers -->
-      <div class="mb-4">
-        <label class="block text-xs font-bold text-pink-900 mb-1.5">نماذج أسئلة جاهزة ومقترحة:</label>
-        <div class="flex flex-wrap gap-2">
-          <button class="teacher-preset-btn px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-200 text-pink-800 text-xs font-semibold border border-pink-200 transition" data-preset="greet">
-            1. طباعة الاسم
-          </button>
-          <button class="teacher-preset-btn px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-200 text-pink-800 text-xs font-semibold border border-pink-200 transition" data-preset="sum">
-            2. جمع رقمين
-          </button>
-          <button class="teacher-preset-btn px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-200 text-pink-800 text-xs font-semibold border border-pink-200 transition" data-preset="evenodd">
-            3. فحص العدد الزوجي
-          </button>
-          <button class="teacher-preset-btn px-2.5 py-1 rounded-xl bg-pink-50 hover:bg-pink-200 text-pink-800 text-xs font-semibold border border-pink-200 transition" data-preset="loops">
-            4. تكرار الأرقام
-          </button>
-        </div>
+      <!-- Tab Buttons -->
+      <div class="flex gap-2 mb-4">
+        <button id="tabCreateTaskBtn" class="flex-1 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition">
+          <i class="fa-solid fa-pen-to-square ml-1"></i> إعداد سؤال جديد لفصلي
+        </button>
+        <button id="tabSubmissionsBtn" class="flex-1 py-2 rounded-xl bg-pink-100 text-pink-800 text-xs font-bold transition">
+          <i class="fa-solid fa-list-check ml-1"></i> إجابات طالباتي فقط (<span id="submissionsCounter">0</span>)
+        </button>
       </div>
 
-      <div class="space-y-3.5">
+      <!-- Tab 1: Create / Broadcast Task -->
+      <div id="tabCreateTaskContent" class="space-y-3">
+        <div class="bg-pink-50/70 border border-pink-200 rounded-2xl p-2.5 text-xs text-pink-900 flex items-center justify-between">
+          <span class="font-bold"><i class="fa-solid fa-bullhorn text-pink-600 ml-1"></i> هذا السؤال سيصل لطالباتكِ فقط عند اختيار اسمكِ:</span>
+          <span id="broadcastTargetTeacher" class="font-bold text-pink-700 bg-white px-2 py-0.5 rounded-lg border border-pink-200">أ. سارة</span>
+        </div>
+
         <div>
-          <label class="block text-xs font-bold text-pink-900 mb-1">عنوان السؤال / التحدي:</label>
-          <input type="text" id="teacherTaskTitleInput" class="w-full bg-pink-50/50 border border-pink-200 rounded-xl px-3 py-2 text-sm text-pink-950 outline-none focus:border-pink-500 font-medium" placeholder="مثال: حساب مساحة المستطيل">
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-pink-900 mb-1">المستوى:</label>
-            <select id="teacherDifficultySelect" class="w-full bg-pink-50/50 border border-pink-200 rounded-xl px-3 py-2 text-sm text-pink-950 outline-none focus:border-pink-500 font-semibold">
-              <option value="مبتدئ">مبتدئ</option>
-              <option value="متوسط">متوسط</option>
-              <option value="متقدم">متقدم</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-pink-900 mb-1">المخرجات المتوقعة للتحقق التلقائي (اختياري):</label>
-            <input type="text" id="teacherExpectedOutputInput" class="w-full bg-pink-50/50 border border-pink-200 rounded-xl px-3 py-2 text-sm text-pink-950 outline-none focus:border-pink-500 direction-ltr text-left font-mono" placeholder="مثال: 50">
-          </div>
+          <label class="block text-xs font-bold text-pink-900 mb-1">عنوان السؤال / الدرس:</label>
+          <input type="text" id="teacherTaskTitle" class="w-full bg-pink-50/50 border border-pink-200 rounded-xl px-3 py-1.5 text-xs text-pink-950 outline-none focus:border-pink-500 font-medium" placeholder="مثال: التدريب 1 - المتغيرات الحسابية">
         </div>
 
         <div>
           <label class="block text-xs font-bold text-pink-900 mb-1">نص السؤال والتعليمات للطالبة:</label>
-          <textarea id="teacherTaskDescInput" rows="3" class="w-full bg-pink-50/50 border border-pink-200 rounded-xl px-3 py-2 text-sm text-pink-950 outline-none focus:border-pink-500 font-medium" placeholder="اكتبي الخطوات المطلوبة بالتفصيل..."></textarea>
+          <textarea id="teacherTaskDesc" rows="3" class="w-full bg-pink-50/50 border border-pink-200 rounded-xl px-3 py-1.5 text-xs text-pink-950 outline-none focus:border-pink-500 font-medium" placeholder="اكتبي ما هو المطلوب من الطالبة بوضوح..."></textarea>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-pink-900 mb-1">الكود الابتدائي المعطى للطالبة (Starter Code):</label>
-          <textarea id="teacherStarterCodeInput" rows="3" class="w-full bg-black font-mono text-xs border border-zinc-800 rounded-xl p-3 text-red-400 outline-none focus:border-pink-500 direction-ltr text-left" placeholder="# كود مبدئي تبدأ منه الطالبة"></textarea>
+          <label class="block text-xs font-bold text-pink-900 mb-1">الكود المبدئي للطالبة (Starter Code):</label>
+          <textarea id="teacherStarterCode" rows="3" class="w-full bg-black font-mono text-xs border border-zinc-800 rounded-xl p-2.5 text-red-400 outline-none direction-ltr text-left" placeholder="# كود تبدأ منه الطالبة"></textarea>
         </div>
 
-        <!-- Live Submissions from Students -->
-        <div class="border-2 border-pink-200 rounded-2xl p-3 bg-pink-50/50">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-pink-900 flex items-center gap-1.5">
-              <i class="fa-solid fa-list-check text-pink-600"></i>
-              إجابات الطالبات المستلمة في هذه الغرفة (<span id="submissionsCountBadge" class="text-pink-600 font-bold">0</span>):
-            </span>
-            <span class="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> تحديث فوري مباشر
-            </span>
-          </div>
-
-          <div id="liveSubmissionsList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
-            <div class="text-center py-4 text-xs text-pink-400">لا توجد إجابات مرسلة حتى الآن في هذه الغرفة...</div>
-          </div>
+        <div>
+          <label class="block text-xs font-bold text-pink-900 mb-1">المخرجات المتوقعة (للتصحيح الذاتي التلقائي):</label>
+          <input type="text" id="teacherExpectedOutput" class="w-full bg-pink-50/50 border border-pink-200 rounded-xl px-3 py-1.5 text-xs text-pink-950 outline-none focus:border-pink-500 direction-ltr text-left font-mono" placeholder="مثال: Hello, Python!">
         </div>
 
-        <!-- Generated Link Output -->
-        <div class="p-3 bg-pink-50 rounded-2xl border border-pink-200 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-pink-900">رابط التحدي لمشاركته كبديل بدون رمز الغرفة:</span>
-            <span id="copiedToast" class="text-pink-600 text-xs font-bold hidden"><i class="fa-solid fa-check"></i> تم نسخ الرابط!</span>
-          </div>
+        <button id="broadcastTaskBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>حفظ وتحديث السؤال لطالباتي الآن ✨</span>
+        </button>
+      </div>
+
+      <!-- Tab 2: Submissions Received for THIS TEACHER ONLY -->
+      <div id="tabSubmissionsContent" class="hidden space-y-2">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-500">قائمة إجابات طالباتكِ المستلمة (معزولة عن بقية المعلمات):</span>
           <div class="flex items-center gap-2">
-            <input type="text" id="shareUrlField" readonly class="flex-1 bg-white border border-pink-200 rounded-xl px-3 py-2 text-xs text-pink-700 font-mono direction-ltr text-left select-all" value="">
-            <button id="copyShareUrlBtn" class="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-              <i class="fa-solid fa-link"></i>
-              <span>نسخ الرابط</span>
-            </button>
+            <button id="filterSubmissionsBtn" class="text-[11px] text-pink-700 bg-pink-100 hover:bg-pink-200 px-2 py-0.5 rounded-lg font-bold">كل الفصول</button>
+            <button id="clearAllSubmissionsBtn" class="text-[11px] text-rose-600 hover:underline">مسح إجاباتي</button>
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
-          <button id="applyToCurrentViewBtn" class="px-4 py-2.5 rounded-xl bg-pink-100 hover:bg-pink-200 text-pink-800 text-xs font-bold transition">
-            <i class="fa-solid fa-eye"></i> تطبيق في شاشتي فقط
-          </button>
-          <button id="broadcastLiveBtn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white text-xs font-bold transition shadow-lg shadow-pink-600/30 flex items-center gap-2 active:scale-95">
-            <i class="fa-solid fa-tower-broadcast"></i>
-            <span>بث السؤال لجميع الطالبات الآن ⚡</span>
-          </button>
+        <div id="submissionsListContainer" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+          <div class="text-center py-8 text-xs text-pink-400">لا توجد إجابات مرسلة من طالباتكِ حتى الآن...</div>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- Help Modal -->
-  <div id="helpModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white border-2 border-pink-300 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative">
-      <button id="closeHelpModalBtn" class="absolute top-5 left-5 text-pink-400 hover:text-pink-600 p-2 rounded-xl bg-pink-50">
+  <!-- Curriculum Drawer / Sidebar (الدروس والتطبيقات البرمجية الرسمية) -->
+  <div id="curriculumSidebarOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+  <aside id="curriculumSidebar" class="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white border-l-2 border-pink-200 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col">
+    
+    <!-- Sidebar Header -->
+    <div class="p-4 border-b border-pink-100 bg-pink-50/80 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-lg shadow-sm">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-pink-950">فهرس المنهج وأوراق العمل</h3>
+          <p class="text-xs text-pink-600 font-semibold" id="sidebarStageName">الخطة الدراسية المعتمدة 2026/2027</p>
+        </div>
+      </div>
+      <button id="closeCurriculumSidebarBtn" class="text-pink-400 hover:text-pink-700 p-2 rounded-xl bg-white border border-pink-200">
         <i class="fa-solid fa-xmark text-lg"></i>
       </button>
-
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-lg">
-          <i class="fa-solid fa-circle-info"></i>
-        </div>
-        <h3 class="text-base font-bold text-pink-900">طريقة استخدام المنصة</h3>
-      </div>
-
-      <div class="space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
-        <div class="p-3 bg-pink-50 rounded-xl border border-pink-200">
-          <strong class="text-pink-700 block mb-1">1. إدخال بيانات الطالبة:</strong>
-          تقوم الطالبة بكتابة اسمها واختيار صفها في الشريط العلوي لتسجيل الحل باسمها.
-        </div>
-        <div class="p-3 bg-pink-50 rounded-xl border border-pink-200">
-          <strong class="text-pink-700 block mb-1">2. ألوان الكود داخل الشاشة السوداء:</strong>
-          تظهر الكلمات البرمجية المحجوزة بالأصفر، وأسماء المتغيرات بالأحمر، والنصوص بالأخضر الهادئ لتسهيل الفهم البرمجي.
-        </div>
-        <div class="p-3 bg-pink-50 rounded-xl border border-pink-200">
-          <strong class="text-pink-700 block mb-1">3. إرسال الحل للمعلمة:</strong>
-          بعد تجربة الكود عبر زر "تشغيل الكود"، تضغط الطالبة على "إرسال الحل للمعلمة 💌" لتسليم كودها مباشرة عبر واتساب أو نسخ تقرير الحل.
-        </div>
-      </div>
     </div>
-  </div>
+
+    <!-- Stage Filter Switch in Sidebar -->
+    <div class="p-3 bg-pink-100/50 border-b border-pink-100 flex gap-2">
+      <button id="btnSwitchGrade10" class="flex-1 py-2 px-3 rounded-xl bg-pink-600 text-white font-bold text-xs transition shadow-sm">
+        الصف العاشر (بايثون)
+      </button>
+      <button id="btnSwitchGrade11" class="flex-1 py-2 px-3 rounded-xl bg-white text-pink-800 font-bold text-xs border border-pink-200 transition">
+        الصف الحادي عشر (SQLite)
+      </button>
+    </div>
+
+    <!-- Lessons List Container -->
+    <div class="flex-1 overflow-y-auto p-3 space-y-2.5" id="lessonsListContainer">
+      <!-- Dynamic Lesson Cards Inserted Here -->
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="p-3 border-t border-pink-100 bg-pink-50 text-[11px] text-pink-700 text-center font-bold">
+      💡 اختاري ورقة العمل لرؤية الحل والنتيجة، أو اضغطي على التمرين الإضافي لحله بنفسكِ!
+    </div>
+  </aside>
+
   <script>
-    // State management
+    // State
     let pyodideInstance = null;
-    let isPyodideLoading = true;
-    let currentExecutionOutput = "";
+    let isPyodideReady = false;
+    let currentOutput = "";
 
-    // Default Starter Assignment
-    const defaultAssignment = {
-      title: "المهمة الأولى: جملة الترحيب",
-      difficulty: "مبتدئ",
-      desc: "اكتبي برنامجاً بلغة بايثون يطبع جملة الترحيب التالية:\nprint(\"Hello, Python!\")\n\n💡 تأكدي من دقة علامات التنصيص وحروف الكلمة.",
-      starterCode: "message = \"Hello, Python!\"\nprint(message)\n",
-      expectedOutput: "Hello, Python!"
+    // أوراق العمل البرمجية الرسمية المعتمدة حرفياً من كتاب الصف العاشر (الفصل الأول)
+    // كل درس يشمل: ورقة عمل الكتاب (الحل النموذجي والمخرجات الدقيقة) + تمرين تطبيقي غير محلول
+    const curriculumData = {
+      "العاشر": [
+        {
+          id: "g10_ws6",
+          week: "الأسبوع 2",
+          worksheet: "ورقة عمل (6) ص69",
+          title: "برنامج: رحلة إلى أبراج الكويت",
+          desc: "نشاط الكتاب ص69: حساب إجمالي تكلفة رحلة مدرسية لأبراج الكويت بمعلومية: سعر تذكرة الدخول، سعر الوجبة، وسعر المواصلات، ثم طباعة إجمالي التكلفة.",
+          starterCode: '# ورقة عمل (6) كتاب الطالب ص69\n# برنامج: رحلة إلى أبراج الكويت\n\nprice_ticket = float(input("Enter ticket price: "))\nprice_meal = float(input("Enter meal price: "))\nprice_trans = float(input("Enter transportation price: "))\n\ntotal_cost = price_ticket + price_meal + price_trans\nprint("Total cost =", total_cost)\n',
+          expectedOutput: "Total cost = 12.5",
+          practice: {
+            title: "تمرين تطبيقي 6: حساب فاتورة مشتريات مدرسية",
+            desc: "اكتبي برنامجاً يستقبل من المستخدم سعر الدفتر وسعر القلم، ويحسب ويطبع إجمالي المبلغ مع رسالة توضيحية.",
+            starterCode: '# تمرين تطبيقي: حساب المشتريات المدرسية\n# 1. استقبلي سعر الدفتر والقلم\n# 2. اجمعي السعرين واطبعي الإجمالي\n',
+            expectedOutput: "Total = 5.0"
+          }
+        },
+        {
+          id: "g10_ws7",
+          week: "الأسبوع 2",
+          worksheet: "ورقة عمل (7) ص71",
+          title: "حساب المبلغ المستحق لحقائب السفر",
+          desc: "نشاط الكتاب ص71: حساب المبلغ المستحق لحقائب السفر التي تخطت الوزن المسموح، بضرب الوزن الإضافي (بالكيلوجرام) في 5 دنانير كويتية.",
+          starterCode: '# ورقة عمل (7) كتاب الطالب ص71\n# برنامج حساب المبلغ المستحق لحقائب السفر\n\npassenger_name = input("Enter passenger name: ")\nextra_weight = float(input("Enter extra bag weight in kg: "))\n\nextra_fee = extra_weight * 5\n\nprint("Passenger:", passenger_name)\nprint("Extra fee =", extra_fee, "KD")\n',
+          expectedOutput: "Extra fee = 25.0 KD",
+          practice: {
+            title: "تمرين تطبيقي 7: حساب تكلفة شحن الطرود",
+            desc: "اكتبي برنامجاً يستقبل وزن الطرد، ويحسب تكلفة الشحن إذا كان سعر الكيلوجرام الواحد هو 3 دنانير.",
+            starterCode: '# تمرين تطبيقي: حساب تكلفة الشحن\nweight = float(input("ادخلي وزن الطرد: "))\n# احسبي التكلفة واطبعيها:\n',
+            expectedOutput: "Shipping cost = 15.0 KD"
+          }
+        },
+        {
+          id: "g10_ws8",
+          week: "الأسبوع 3",
+          worksheet: "ورقة عمل (8) ص85",
+          title: "تأمين كلمة المرور وعكس النص",
+          desc: "نشاط الكتاب ص85: عكس ترتيب أحرف كلمة المرور المدخلة باستخدام التقطيع Slicing [::-1] لتوضيح فكرة إخفاء شكل الكلمة.",
+          starterCode: '# ورقة عمل (8) كتاب الطالب ص85\n# برنامج: تأمين كلمة المرور\n\npassword = input("Enter password: ")\nreversed_password = password[::-1]\n\nprint("Protected Password:", reversed_password)\n',
+          expectedOutput: "Protected Password: pass123reversed",
+          practice: {
+            title: "تمرين تطبيقي 8: عكس اسم المدينة",
+            desc: "اكتبي برنامجاً يستقبل اسم بلدكِ (مثل Kuwait) ويطبع الاسم مقلوباً بالأحرف المعكوسة باستخدام [::-1].",
+            starterCode: '# تمرين تطبيقي: عكس السلسلة النصية\ncountry = input("ادخلي اسم الدولة: ")\n# اعكسي النص واطبعي النتيجة:\n',
+            expectedOutput: "tiawuK"
+          }
+        },
+        {
+          id: "g10_ws9",
+          week: "الأسبوع 3",
+          worksheet: "ورقة عمل (9) ص87",
+          title: "تقطيع السلسلة: فصل الدينار والفلس",
+          desc: "نشاط الكتاب ص87: استخراج الجزء الصحيح (دينار) والجزء العشري (فلس) من مبلغ مالي مثل 500.750 باستخدام دالة find والتقطيع.",
+          starterCode: '# ورقة عمل (9) كتاب الطالب ص87\n# برنامج: تقطيع السلسلة النصية (دينار وفلس)\n\nvar_amount = input("Enter amount e.g (500.750): ")\nvar_position = var_amount.find(".")\n\nvar_kd = var_amount[:var_position]\nvar_fils = var_amount[var_position + 1:]\n\nprint(f"{var_kd} KD And {var_fils} fils")\n',
+          expectedOutput: "500 KD And 750 fils",
+          practice: {
+            title: "تمرين تطبيقي 9: فصل اسم المستخدم والموقع من البريد",
+            desc: "استقبلي بريداً إلكترونياً مثل student@school.edu واستخرجي الجزء الذي يسبق علامة @ باستخدام find و slicing.",
+            starterCode: '# تمرين تطبيقي: استخراج اسم المستخدم من الإيميل\nemail = input("ادخلي البريد الإلكتروني: ")\n# اوجدي موقع @ واستخرجي الاسم قبله:\n',
+            expectedOutput: "Username: student"
+          }
+        },
+        {
+          id: "g10_ws10",
+          week: "الأسبوع 4",
+          worksheet: "ورقة عمل (10) ص89",
+          title: "تقطيع الاسم الكامل Full Name",
+          desc: "نشاط الكتاب ص89: تقسيم الاسم الثلاثي بالإنجليزية للحصول على: الاسم الأول، الأوسط، والأخير وطباعتها مع دالة capitalize().",
+          starterCode: '# ورقة عمل (10) كتاب الطالب ص89\n# برنامج: تقطيع الاسم الكامل وتنسيقه\n\nfull_name = input("Enter your full name (Three Parts): ")\nprint("Characters in your name:", len(full_name))\n\nposition_space1 = full_name.find(" ")\nposition_space2 = full_name.find(" ", position_space1 + 1)\n\nfirst_name = full_name[:position_space1]\nsecond_name = full_name[position_space1 + 1:position_space2]\nthird_name = full_name[position_space2 + 1:]\n\nprint(first_name.capitalize())\nprint(second_name.capitalize())\nprint(third_name.capitalize())\n',
+          expectedOutput: "Hamad\nFahed\nSalem",
+          practice: {
+            title: "تمرين تطبيقي 10: استخراج الاسم الأول والأخير فقط",
+            desc: "استقبلي اسماً ثنائياً واطبعي كل جزء في سطر مستقل بعد تحويل الحرف الأول إلى حرف كبير Capital.",
+            starterCode: '# تمرين تطبيقي: الاسم الثنائي\nname = input("Enter two-part name: ")\n# قسمي الاسم واطبعيه منسقاً:\n',
+            expectedOutput: "Sara\nAhmad"
+          }
+        },
+        {
+          id: "g10_ws11",
+          week: "الأسبوع 5",
+          worksheet: "ورقة عمل (11) ص105",
+          title: "حساب الخصومات على المنتجات",
+          desc: "نشاط الكتاب ص105: إذا كان السعر أكبر من 1000 يطبق خصم 25%، وإذا كان بين 500 و 1000 يطبق 15%، وإلا لا يوجد خصم، ثم حساب السعر النهائي.",
+          starterCode: '# ورقة عمل (11) كتاب الطالب ص105\n# برنامج: حساب الخصومات على المنتجات\n\nprice = float(input("Enter total price: "))\n\nif price > 1000:\n    discount = price * 0.25\nelif price >= 500:\n    discount = price * 0.15\nelse:\n    discount = 0.0\n\nfinal_cost = price - discount\nprint("Final cost =", final_cost)\n',
+          expectedOutput: "Final cost = 750.0",
+          practice: {
+            title: "تمرين تطبيقي 11: تحديد الفئة السعرية للتذكرة",
+            desc: "اكتبي برنامجاً يفحص عمر الراكب age: إذا كان أقل من 12 السعر 3 دنانير، وإلا السعر 7 دنانير.",
+            starterCode: '# تمرين تطبيقي: تسعير التذاكر بحسب العمر\nage = int(input("ادخلي العمر: "))\n# اكتبي جملة if الشرطية:\n',
+            expectedOutput: "Ticket = 3 KD"
+          }
+        },
+        {
+          id: "g10_ws12",
+          week: "الأسبوع 6",
+          worksheet: "ورقة عمل (12) ص107",
+          title: "تصميم آلة حاسبة والتحقق من الصفر",
+          desc: "نشاط الكتاب ص107: استقبال عددين ومعامل حسابي (+, -, *, /) وتنفيذ العملية مع فحص عدم القسمة على الصفر.",
+          starterCode: '# ورقة عمل (12) كتاب الطالب ص107\n# برنامج: تصميم آلة حاسبة بسيطة\n\nnum1 = float(input("Enter First Number: "))\nnum2 = float(input("Enter Second Number: "))\noperator = input("Enter Math Operator (+, -, *, /): ")\n\nif operator == "+":\n    print(num1 + num2)\nelif operator == "-":\n    print(num1 - num2)\nelif operator == "*":\n    print(num1 * num2)\nelif operator == "/":\n    if num2 != 0:\n        print(num1 / num2)\n    else:\n        print("It cannot be divided by zero")\nelse:\n    print("Unsupported operator")\n',
+          expectedOutput: "25.0",
+          practice: {
+            title: "تمرين تطبيقي 12: فحص العدد الأكبر بين قيمتين",
+            desc: "اكتبي برنامجاً يستقبل عددين x و y ويطبع العدد الأكبر بينهما.",
+            starterCode: '# تمرين تطبيقي: مقارنة عددين\nx = float(input("العدد الأول: "))\ny = float(input("العدد الثاني: "))\n# اكتبي الشرط واطبعي الأكبر:\n',
+            expectedOutput: "Max = 20.0"
+          }
+        },
+        {
+          id: "g10_ws13",
+          week: "الأسبوع 7",
+          worksheet: "ورقة عمل (13) ص127",
+          title: "برنامج تخمين عدد بحلقة while",
+          desc: "نشاط الكتاب ص127: استمرار الحلقة التكرارية حتى يقوم المستخدم بتخمين العدد الصحيح ومطابقته للرقم 8.",
+          starterCode: '# ورقة عمل (13) كتاب الطالب ص127\n# برنامج: تخمين عدد صحيح\n\nnumber_correct = 8\nnumber_player = 0\n\nwhile number_player != number_correct:\n    number_player = int(input("Guess what is the number in my mind! : "))\n    if number_player > number_correct:\n        print("The player number is higher.")\n    elif number_player < number_correct:\n        print("The player number is lower.")\n\nprint("correct! well done.")\n',
+          expectedOutput: "correct! well done.",
+          practice: {
+            title: "تمرين تطبيقي 13: تكرار طلب كلمة السر حتى كتابتها صحيحة",
+            desc: "باستخدام حلقة while، استمري في طلب كلمة المرور طالما أنها لا تساوي 1234، وعند كتابتها صحيحة اطبعي 'أهلاً بك'.",
+            starterCode: '# تمرين تطبيقي: حلقة while لكلمة السر\npin = ""\nwhile pin != "1234":\n    pin = input("ادخلي الرمز: ")\nprint("أهلاً بك")\n',
+            expectedOutput: "أهلاً بك"
+          }
+        },
+        {
+          id: "g10_ws14",
+          week: "الأسبوع 8",
+          worksheet: "ورقة عمل (14) ص129",
+          title: "برنامج جدول الضرب بحلقة for",
+          desc: "نشاط الكتاب ص129: استقبال عدد صحيح وطباعة جدول الضرب الخاص به من 1 إلى 12 بتنسيق مرتب.",
+          starterCode: '# ورقة عمل (14) كتاب الطالب ص129\n# برنامج: طباعة جدول الضرب لعدد محدد\n\nnum = int(input("Please enter an integer number: "))\nprint("Multiplication table for", num)\n\nfor i in range(1, 13):\n    result = num * i\n    print(f"{num} x {i} = {result}")\n',
+          expectedOutput: "3 x 1 = 3\n3 x 2 = 6\n3 x 3 = 9\n3 x 4 = 12\n3 x 5 = 15\n3 x 6 = 18\n3 x 7 = 21\n3 x 8 = 24\n3 x 9 = 27\n3 x 10 = 30\n3 x 11 = 33\n3 x 12 = 36",
+          practice: {
+            title: "تمرين تطبيقي 14: طباعة الأعداد من 1 إلى 5 ومربعاتها",
+            desc: "باستخدام حلقة for مع دالة range(1, 6)، اطبعي كل عدد ومربعه (num ** 2).",
+            starterCode: '# تمرين تطبيقي: حلقة for لحساب المربعات\n# اكتبي كود الحلقة هنا:\n',
+            expectedOutput: "1 -> 1\n2 -> 4\n3 -> 9\n4 -> 16\n5 -> 25"
+          }
+        },
+        {
+          id: "g10_ws15",
+          week: "الأسبوع 9",
+          worksheet: "ورقة عمل (15) ص143",
+          title: "فاتورة المشتريات ومعالجة الاستثناءات",
+          desc: "نشاط الكتاب ص143: حساب صافي الفاتورة مع استخدام try...except لمنع توقف البرنامج عند إدخال نصوص بدلاً من الأرقام، واستخدام finally لطباعة رسالة النهاية.",
+          starterCode: '# ورقة عمل (15) كتاب الطالب ص143\n# برنامج: حساب الفاتورة بعد الخصم مع معالجة الأخطاء\n\ntry:\n    price = float(input("Enter original price: "))\n    discount = float(input("Enter discount (%): "))\n    if price > 0 and 0 <= discount <= 100:\n        price_net = price - (price * discount / 100)\n        print("Net price after discount is:", price_net)\n    else:\n        print("Error: Invalid price or discount range.")\nexcept ValueError:\n    print("Error: Please enter valid numeric values.")\nfinally:\n    print("Program has ended")\n',
+          expectedOutput: "Net price after discount is: 80.0\nProgram has ended",
+          practice: {
+            title: "تمرين تطبيقي 15: معالجة خطأ إدخال العمر",
+            desc: "استخدمي try و except لتحويل العمر إلى int، فإذا أدخلت الطالبة نصاً اطبعي 'الرجاء إدخال أرقام فقط'.",
+            starterCode: '# تمرين تطبيقي: معالجة الأخطاء\ntry:\n    age = int(input("ادخلي عمركِ: "))\n    print("العمر:", age)\nexcept ValueError:\n    print("الرجاء إدخال أرقام فقط")\n',
+            expectedOutput: "العمر: 16"
+          }
+        },
+        {
+          id: "g10_ws16",
+          week: "الأسبوع 9",
+          worksheet: "ورقة عمل (16) ص145",
+          title: "مؤشر كتلة الجسم BMI ومعالجة الأخطاء",
+          desc: "نشاط الكتاب ص145: حساب BMI = الوزن / (الطول ** 2) مع معالجة استثناءات ValueError و ZeroDivisionError والتكرار حتى الضغط على Q للخروج.",
+          starterCode: '# ورقة عمل (16) كتاب الطالب ص145\n# برنامج: حساب مؤشر كتلة الجسم BMI وتصنيفه\n\ntry:\n    kg_weight = float(input("Enter your weight in kilograms: "))\n    m_height = float(input("Enter your height in meters: "))\n    value_bmi = kg_weight / (m_height ** 2)\n    print(f"Your BMI is: {value_bmi:.2f}")\n    \n    if value_bmi < 18.5:\n        print("You are underweight.")\n    elif 18.5 <= value_bmi < 25:\n        print("You have a normal weight.")\n    elif 25 <= value_bmi < 30:\n        print("You are overweight.")\n    else:\n        print("You are obese.")\nexcept ValueError:\n    print("Error: Please enter valid numbers for weight and height.")\nexcept ZeroDivisionError:\n    print("Error: You cannot divide by zero!")\n',
+          expectedOutput: "Your BMI is: 22.86\nYou have a normal weight.",
+          practice: {
+            title: "تمرين تطبيقي 16: فحص قسمة عددين وتفادي الصفر",
+            desc: "اكتبي برنامجاً يقسم عددين، مع حماية البرنامج من خطأ ZeroDivisionError وطباعة رسالة 'لا يمكن القسمة على صفر'.",
+            starterCode: '# تمرين تطبيقي: تفادي القسمة على صفر\ntry:\n    a = float(input("البسط: "))\n    b = float(input("المقام: "))\n    print("النتيجة:", a / b)\nexcept ZeroDivisionError:\n    print("لا يمكن القسمة على صفر")\n',
+            expectedOutput: "النتيجة: 5.0"
+          }
+        }
+      ],
+      "الحادي عشر": [
+        {
+          id: "g11_ws1",
+          week: "الأسبوع 1",
+          worksheet: "ورقة عمل 1",
+          title: "إنشاء قواعد البيانات: SQLite Connect",
+          desc: "نشاط الكتاب: استوردي مكتبة sqlite3، وأنشئي اتصالاً بقاعدة بيانات في الذاكرة :memory: ثم اطبعي رسالة 'تم الاتصال بنجاح'.",
+          starterCode: '# ورقة عمل 1 من الكتاب: اتصال بقاعدة بيانات SQLite\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\nprint("تم الاتصال بنجاح")\nconn.close()\n',
+          expectedOutput: "تم الاتصال بنجاح",
+          practice: {
+            title: "تمرين إضافي 1: إنشاء ملف قاعدة بيانات",
+            desc: "استوردي مكتبة sqlite3 وأنشئي اتصالاً بقاعدة بيانات باسم school.db ثم اطبعي 'متصل بمدرسة الكويت'.",
+            starterCode: '# تمرين إضافي 1: اتصال SQLite\nimport sqlite3\n# اكتبي كود الاتصال واطبعي الرسالة:\n',
+            expectedOutput: "متصل بمدرسة الكويت"
+          }
+        },
+        {
+          id: "g11_ws2",
+          week: "الأسبوع 2",
+          worksheet: "ورقة عمل 2",
+          title: "إنشاء الجداول Creating Tables",
+          desc: "نشاط الكتاب: أنشئي جدولاً باسم students يحتوي على الحقول: id و name، ثم اطبعي 'تم إنشاء الجدول'.",
+          starterCode: '# ورقة عمل 2 من الكتاب: إنشاء جدول الطلاب\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (id INT, name TEXT)")\nconn.commit()\nprint("تم إنشاء الجدول")\nconn.close()\n',
+          expectedOutput: "تم إنشاء الجدول",
+          practice: {
+            title: "تمرين إضافي 2: إنشاء جدول المعلمات",
+            desc: "أنشئي جدولاً باسم teachers بحقلين (id INT, subject TEXT) ثم اطبعي 'تم إنشاء جدول المعلمات'.",
+            starterCode: '# تمرين إضافي 2: إنشاء الجدول\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\n# اكتبي أمر إنشاء الجدول هنا:\n',
+            expectedOutput: "تم إنشاء جدول المعلمات"
+          }
+        },
+        {
+          id: "g11_ws3",
+          week: "الأسبوع 3",
+          worksheet: "ورقة عمل 3",
+          title: "إضافة البيانات Inserting Data",
+          desc: "نشاط الكتاب: أضيفي سجلاً في جدول students بالقيم (1, 'فاطمة') واطبعي عدد السجلات المضافة cursor.rowcount.",
+          starterCode: '# ورقة عمل 3 من الكتاب: إضافة البيانات\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (id INT, name TEXT)")\ncursor.execute("INSERT INTO students VALUES (1, \'فاطمة\')")\nconn.commit()\nprint("تمت الإضافة بنجاح:", cursor.rowcount)\nconn.close()\n',
+          expectedOutput: "تمت الإضافة بنجاح: 1",
+          practice: {
+            title: "تمرين إضافي 3: إدراج سجل درجات",
+            desc: "أنشئي جدول grades (score INT) وأضيفي القيمة 95 ثم اطبعي 'تم رصد الدرجة'.",
+            starterCode: '# تمرين إضافي 3: إضافة درجة\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE grades (score INT)")\n# أضيفي القيمة واطبعي الرسالة:\n',
+            expectedOutput: "تم رصد الدرجة"
+          }
+        },
+        {
+          id: "g11_ws4",
+          week: "الأسبوع 4",
+          worksheet: "ورقة عمل 4",
+          title: "تابع إضافة البيانات المتعددة executemany",
+          desc: "نشاط الكتاب: أضيفي سجلين لطالبتين (1, 'سارة') و (2, 'نورة')، ثم اطبعي العدد الإجمالي للطالبات في الجدول.",
+          starterCode: '# ورقة عمل 4 من الكتاب: إضافة سجلات متعددة\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (id INT, name TEXT)")\ncursor.execute("INSERT INTO students VALUES (1, \'سارة\')")\ncursor.execute("INSERT INTO students VALUES (2, \'نورة\')")\nconn.commit()\ncursor.execute("SELECT COUNT(*) FROM students")\ncount = cursor.fetchone()[0]\nprint("عدد الطالبات:", count)\nconn.close()\n',
+          expectedOutput: "عدد الطالبات: 2",
+          practice: {
+            title: "تمرين إضافي 4: إدراج 3 سجلات",
+            desc: "أضيفي 3 سجلات في جدول أرقام واطبعي 'إجمالي السجلات: 3'.",
+            starterCode: '# تمرين إضافي 4: سجلات متعددة\n# اكتبي الكود هنا:\n',
+            expectedOutput: "إجمالي السجلات: 3"
+          }
+        },
+        {
+          id: "g11_ws5",
+          week: "الأسبوع 5",
+          worksheet: "ورقة عمل 5",
+          title: "الاستعلام عن البيانات Querying Data",
+          desc: "نشاط الكتاب: استعلمي عن جميع أسماء الطالبات في الجدول باستخدام دالة fetchall() واطبعي قائمة النتائج.",
+          starterCode: '# ورقة عمل 5 من الكتاب: الاستعلام عن البيانات\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (id INT, name TEXT)")\ncursor.execute("INSERT INTO students VALUES (1, \'مريم\')")\ncursor.execute("SELECT name FROM students")\nrows = cursor.fetchall()\nprint(rows)\nconn.close()\n',
+          expectedOutput: "[('مريم',)]",
+          practice: {
+            title: "تمرين إضافي 5: جلب أول سجل بمفردة fetchone",
+            desc: "أضيفي الطالبة 'أسيل' واجلبي اسمها باستخدام دالة fetchone() واطبعي اسمها فقط.",
+            starterCode: '# تمرين إضافي 5: الاستعلام fetchone\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (name TEXT)")\ncursor.execute("INSERT INTO students VALUES (\'أسيل\')")\n# استعلمي عن الاسم واطبعيه:\n',
+            expectedOutput: "أسيل"
+          }
+        },
+        {
+          id: "g11_ws6",
+          week: "الأسبوع 6",
+          worksheet: "ورقة عمل 6",
+          title: "تابع الاستعلام والتصفية بشرط WHERE",
+          desc: "نشاط الكتاب: استعلمي عن اسم الطالبة التي تملك id = 2 باستخدام شرط WHERE واطبعي الاسم على الشاشة.",
+          starterCode: '# ورقة عمل 6 من الكتاب: الاستعلام المشروط WHERE\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (id INT, name TEXT)")\ncursor.execute("INSERT INTO students VALUES (1, \'ريم\')")\ncursor.execute("INSERT INTO students VALUES (2, \'شروق\')")\ncursor.execute("SELECT name FROM students WHERE id = 2")\nstudent = cursor.fetchone()[0]\nprint("الطالبة هي:", student)\nconn.close()\n',
+          expectedOutput: "الطالبة هي: شروق",
+          practice: {
+            title: "تمرين إضافي 6: التصفية بالدرجة",
+            desc: "استعلمي عن الدرجة الأكبر من 50 من جدول الدرجات واطبعي الناتج.",
+            starterCode: '# تمرين إضافي 6: شرط WHERE\n# اكتبي الكود هنا:\n',
+            expectedOutput: "85"
+          }
+        },
+        {
+          id: "g11_ws7",
+          week: "الأسبوع 7",
+          worksheet: "ورقة عمل 7",
+          title: "تحديث البيانات Updating Data",
+          desc: "نشاط الكتاب: حدثي اسم الطالبة التي تملك id = 1 ليصبح 'دلال' باستخدام أمر UPDATE واطبعي الاسم بعد التحديث.",
+          starterCode: '# ورقة عمل 7 من الكتاب: تحديث البيانات UPDATE\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (id INT, name TEXT)")\ncursor.execute("INSERT INTO students VALUES (1, \'قديم\')")\ncursor.execute("UPDATE students SET name = \'دلال\' WHERE id = 1")\nconn.commit()\ncursor.execute("SELECT name FROM students WHERE id = 1")\nprint(cursor.fetchone()[0])\nconn.close()\n',
+          expectedOutput: "دلال",
+          practice: {
+            title: "تمرين إضافي 7: تحديث الدرجة",
+            desc: "حدثي درجة الطالبة من 70 إلى 100 ثم اطبعي 'تم التحديث بنجاح'.",
+            starterCode: '# تمرين إضافي 7: أمر UPDATE\n# اكتبي الكود هنا:\n',
+            expectedOutput: "تم التحديث بنجاح"
+          }
+        },
+        {
+          id: "g11_ws8",
+          week: "الأسبوع 8",
+          worksheet: "ورقة عمل 8",
+          title: "حذف البيانات Deleting Data",
+          desc: "نشاط الكتاب: احذفي الطالبة ذات الرقم id = 1 باستخدام أمر DELETE FROM ثم تأكدي من أن الجدول أصبح فارغاً.",
+          starterCode: '# ورقة عمل 8 من الكتاب: حذف السجلات DELETE\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE students (id INT, name TEXT)")\ncursor.execute("INSERT INTO students VALUES (1, \'حور\')")\ncursor.execute("DELETE FROM students WHERE id = 1")\nconn.commit()\ncursor.execute("SELECT COUNT(*) FROM students")\nprint("المتبقي:", cursor.fetchone()[0])\nconn.close()\n',
+          expectedOutput: "المتبقي: 0",
+          practice: {
+            title: "تمرين إضافي 8: حذف سجل محدد",
+            desc: "أنشئي جدولاً واحذفي سجلاً منه ثم اطبعي 'تم الحذف'.",
+            starterCode: '# تمرين إضافي 8: أمر DELETE\n# اكتبي الكود هنا:\n',
+            expectedOutput: "تم الحذف"
+          }
+        },
+        {
+          id: "g11_ws9",
+          week: "الأسبوع 9",
+          worksheet: "ورقة عمل 9",
+          title: "الذكاء الاصطناعي وقواعد البيانات AI & Database",
+          desc: "نشاط الكتاب: اكتبي كوداً يحلل درجات الطالبات في جدول SQLite ويحدد تلقائياً إن كان معدل الدرجات متفوقاً (>= 90).",
+          starterCode: '# ورقة عمل 9 من الكتاب: التكامل الذكي مع قواعد البيانات\n# الحل النموذجي:\nimport sqlite3\nconn = sqlite3.connect(":memory:")\ncursor = conn.cursor()\ncursor.execute("CREATE TABLE grades (score INT)")\ncursor.execute("INSERT INTO grades VALUES (95)")\ncursor.execute("INSERT INTO grades VALUES (91)")\ncursor.execute("SELECT AVG(score) FROM grades")\navg = cursor.fetchone()[0]\nif avg >= 90:\n    print("تصنيف الأداء: متفوق")\nelse:\n    print("تصنيف الأداء: عادي")\nconn.close()\n',
+          expectedOutput: "تصنيف الأداء: متفوق",
+          practice: {
+            title: "تمرين إضافي 9: تصنيف عدد السجلات تلقائياً",
+            desc: "احسبي عدد السجلات في جدول، فإذا كان أكثر من 0 اطبعي 'قاعدة بيانات نشطة'.",
+            starterCode: '# تمرين إضافي 9: ذكاء البيانات\n# اكتبي الكود هنا:\n',
+            expectedOutput: "قاعدة بيانات نشطة"
+          }
+        }
+      ]
     };
-
-    let currentAssignment = { ...defaultAssignment };
-
-    // Built-in presets for teachers
-    const teacherPresets = {
-      greet: {
-        title: "برنامج التحية باسم الطالبة",
-        difficulty: "مبتدئ",
-        desc: "اطلبي من المستخدم إدخال اسمه بواسطة دالة input()، ثم اطبّعي رسالة ترحيبية بالاسم:\nمثال: Hello Sarah",
-        starterCode: "name = input(\"Enter your name: \")\nprint(\"Hello \" + name)\n",
-        expectedOutput: ""
+    
+    // Multi-Teacher System Configuration with the new teachers (Independent of stages)
+    const teachersDatabase = {
+      "1010": {
+        id: "wafaa",
+        pin: "1010",
+        name: "أ. وفاء عليان",
+        task: { ...curriculumData["العاشر"][0] }
       },
-      sum: {
-        title: "حساب مجموع رقمين",
-        difficulty: "مبتدئ",
-        desc: "عرّفي متغيرين a و b بقيمتَي 15 و 25، ثم قومي بطباعة ناتج الجمع بينهما.",
-        starterCode: "a = 15\nb = 25\ntotal = a + b\nprint(total)\n",
-        expectedOutput: "40"
+      "2020": {
+        id: "fatima",
+        pin: "2020",
+        name: "أ. فاطمة المطيري",
+        task: { ...curriculumData["العاشر"][1] }
       },
-      evenodd: {
-        title: "فحص العدد الزوجي والفردي",
-        difficulty: "متوسط",
-        desc: "اكتبي كوداً يفحص المتغير num = 8. إذا كان زوجياً يطبع 'Even' وإذا كان فردياً يطبع 'Odd'.",
-        starterCode: "num = 8\nif num % 2 == 0:\n    print(\"Even\")\nelse:\n    print(\"Odd\")\n",
-        expectedOutput: "Even"
+      "3030": {
+        id: "shouq",
+        pin: "3030",
+        name: "أ. شوق بو عباس",
+        task: { ...curriculumData["الحادي عشر"][1] }
       },
-      loops: {
-        title: "طباعة الأرقام من 1 إلى 5",
-        difficulty: "متوسط",
-        desc: "باستخدام حلقة for مع range()، اطبعي الأرقام من 1 إلى 5 بحيث يكون كل رقم في سطر منفصل.",
-        starterCode: "for i in range(1, 6):\n    print(i)\n",
-        expectedOutput: "1\n2\n3\n4\n5"
+      "4040": {
+        id: "nouf",
+        pin: "4040",
+        name: "أ. نوف الجهيم",
+        task: { ...curriculumData["الحادي عشر"][4] }
       }
     };
 
-    // DOM Elements
+    let loggedInTeacher = null;
+    let selectedTeacherId = "wafaa";
+    let currentSelectedCurriculumGrade = "العاشر";
+    let activeLessonParent = curriculumData["العاشر"][0]; // الدرس الأصلي الحاضر
+    let isPracticeMode = false; // هل نحن في وضع التمرين غير المحلول؟
+
+    // قوائم الفصول حسب المرحلة
+    const classData = {
+      "العاشر": ["عاشر 1", "عاشر 2", "عاشر 3", "عاشر 4", "عاشر 5"],
+      "الحادي عشر علمي": ["11ع 1", "11ع 2", "11ع 3"],
+      "الحادي عشر أدبي": ["11د 1", "11د 2"]
+    };
+
+    // قائمة أسماء طالبات الصف 10-3
+    const students10_3 = [
+      "أسيل بدر تركى رحيل",
+      "انفال عبدالله مسعود السعيد",
+      "جنى خالد رضا غلام",
+      "حور احمد عبيد سيار القلاد الرشيدي",
+      "دلال مشاري غسان الحملى",
+      "ريم على محمد العبدالهادي",
+      "زهراء محمد جاسم الرامزي",
+      "ساره ايوب احمد سالم",
+      "ساره مشعل عبد الله الرميثان الصليلي",
+      "شروق محمد فؤاد دابي",
+      "شيخه سعيد نايف الدوسري",
+      "صديقه حسين السيد محمد بهبهاني",
+      "عائشه سعود طارق محمد جابر جاسم",
+      "عايشه خالد فهيد العجمي",
+      "غاليه مجدي سالم الجويهل",
+      "فاطمه احمد فاضل عبدالرحمن ع الكندري",
+      "لولوه يونس نوح المسري",
+      "مريم احمد عادل سعدون",
+      "مريم ثامر محمد الخالدى",
+      "منيره رجا محمد فلاح",
+      "موضي سعد سلطان السبيعى",
+      "موضي محمد ماجد العجمي",
+      "مياسه جارالله سالم راشد المري",
+      "نوره علي سالم راشد المري",
+      "نوره ناصر سعد ناصر مبارك الدوسرى",
+      "هاجر سعيد نايف حباب مبارك الدوسري",
+      "ياسمين عبدالله محمد الحربى"
+    ];
+
+    // Current Assignment Displayed
+    let activeTask = { ...curriculumData["العاشر"][0] };
+
+    // Submissions Store (in-memory, tagged with teacherId)
+    let submissions = [];
+
+    // DOM References
     const pythonCodeArea = document.getElementById('pythonCodeArea');
     const codeHighlightDisplay = document.getElementById('codeHighlightDisplay');
     const lineNumbers = document.getElementById('lineNumbers');
     const terminalScreen = document.getElementById('terminalScreen');
     const runCodeBtn = document.getElementById('runCodeBtn');
+    const testSolutionBtn = document.getElementById('testSolutionBtn');
     const clearEditorBtn = document.getElementById('clearEditorBtn');
-    const copyCodeBtn = document.getElementById('copyCodeBtn');
     const clearConsoleBtn = document.getElementById('clearConsoleBtn');
-    const loadStarterCodeBtn = document.getElementById('loadStarterCodeBtn');
-    const checkSolutionBtn = document.getElementById('checkSolutionBtn');
-    const feedbackAlert = document.getElementById('feedbackAlert');
+    const resetCodeBtn = document.getElementById('resetCodeBtn');
+    const submitSolutionBtn = document.getElementById('submitSolutionBtn');
+    const submissionNotice = document.getElementById('submissionNotice');
 
-    const studentNameInput = document.getElementById('studentNameInput');
+    const studentTeacherSelect = document.getElementById('studentTeacherSelect');
+    const studentStageSelect = document.getElementById('studentStageSelect');
     const studentClassSelect = document.getElementById('studentClassSelect');
-    const sendToTeacherBtn = document.getElementById('sendToTeacherBtn');
+    const studentNameInput = document.getElementById('studentNameInput');
+    const studentNameSelect = document.getElementById('studentNameSelect');
+    const studentHeaderTeacherIndicator = document.getElementById('studentHeaderTeacherIndicator');
 
-    const submissionModal = document.getElementById('submissionModal');
-    const closeSubmissionModalBtn = document.getElementById('closeSubmissionModalBtn');
-    const modalStudentName = document.getElementById('modalStudentName');
-    const modalStudentClass = document.getElementById('modalStudentClass');
-    const modalTaskTitle = document.getElementById('modalTaskTitle');
-    const whatsappSubmitBtn = document.getElementById('whatsappSubmitBtn');
-    const copySubmissionReportBtn = document.getElementById('copySubmissionReportBtn');
-    const copyReportSuccess = document.getElementById('copyReportSuccess');
+    const taskTitle = document.getElementById('taskTitle');
+    const taskTypeBadge = document.getElementById('taskTypeBadge');
+    const taskDescription = document.getElementById('taskDescription');
+    const expectedOutputBox = document.getElementById('expectedOutputBox');
+    const expectedOutputText = document.getElementById('expectedOutputText');
 
-    const engineStatusBadge = document.getElementById('engineStatusBadge');
+    const btnModeSolution = document.getElementById('btnModeSolution');
+    const btnModePractice = document.getElementById('btnModePractice');
+
+    // Curriculum Sidebar Elements
+    const toggleCurriculumSidebarBtn = document.getElementById('toggleCurriculumSidebarBtn');
+    const curriculumSidebarOverlay = document.getElementById('curriculumSidebarOverlay');
+    const curriculumSidebar = document.getElementById('curriculumSidebar');
+    const closeCurriculumSidebarBtn = document.getElementById('closeCurriculumSidebarBtn');
+    const btnSwitchGrade10 = document.getElementById('btnSwitchGrade10');
+    const btnSwitchGrade11 = document.getElementById('btnSwitchGrade11');
+    const lessonsListContainer = document.getElementById('lessonsListContainer');
+    const sidebarStageName = document.getElementById('sidebarStageName');
+    const curriculumStageBadge = document.getElementById('curriculumStageBadge');
+
+    // Mobile Section View Switcher Elements
+    const mobileTabQuestion = document.getElementById('mobileTabQuestion');
+    const mobileTabEditor = document.getElementById('mobileTabEditor');
+    const mobileTabTerminal = document.getElementById('mobileTabTerminal');
+    const questionSectionWrapper = document.getElementById('questionSectionWrapper');
+    const editorSectionWrapper = document.getElementById('editorSectionWrapper');
+    const terminalSectionWrapper = document.getElementById('terminalSectionWrapper');
+
+    const brandLogoTrigger = document.getElementById('brandLogoTrigger');
+    const openTeacherDashboardDirectBtn = document.getElementById('openTeacherDashboardDirectBtn');
+    const activeTeacherNameLabel = document.getElementById('activeTeacherNameLabel');
+    const teacherLoginModal = document.getElementById('teacherLoginModal');
+    const closeTeacherLoginModalBtn = document.getElementById('closeTeacherLoginModalBtn');
+    const teacherPinInput = document.getElementById('teacherPinInput');
+    const submitTeacherLoginBtn = document.getElementById('submitTeacherLoginBtn');
+    const loginErrorMsg = document.getElementById('loginErrorMsg');
+    const teacherLogoutBtn = document.getElementById('teacherLogoutBtn');
+
+    const teacherDashboardModal = document.getElementById('teacherDashboardModal');
+    const closeTeacherDashboardBtn = document.getElementById('closeTeacherDashboardBtn');
+    const currentTeacherProfileName = document.getElementById('currentTeacherProfileName');
+    const currentTeacherStagesTag = document.getElementById('currentTeacherStagesTag');
+    const broadcastTargetTeacher = document.getElementById('broadcastTargetTeacher');
+    const tabCreateTaskBtn = document.getElementById('tabCreateTaskBtn');
+    const tabSubmissionsBtn = document.getElementById('tabSubmissionsBtn');
+    const tabCreateTaskContent = document.getElementById('tabCreateTaskContent');
+    const tabSubmissionsContent = document.getElementById('tabSubmissionsContent');
+    const broadcastTaskBtn = document.getElementById('broadcastTaskBtn');
+
+    const teacherTaskTitle = document.getElementById('teacherTaskTitle');
+    const teacherTaskDesc = document.getElementById('teacherTaskDesc');
+    const teacherStarterCode = document.getElementById('teacherStarterCode');
+    const teacherExpectedOutput = document.getElementById('teacherExpectedOutput');
+    const submissionsListContainer = document.getElementById('submissionsListContainer');
+    const submissionsCounter = document.getElementById('submissionsCounter');
+    const clearAllSubmissionsBtn = document.getElementById('clearAllSubmissionsBtn');
+
     const engineDot = document.getElementById('engineDot');
     const engineStatusText = document.getElementById('engineStatusText');
 
-    // Teacher Modal DOM
-    const teacherModal = document.getElementById('teacherModal');
-    const openTeacherModalBtn = document.getElementById('openTeacherModalBtn');
-    const closeTeacherModalBtn = document.getElementById('closeTeacherModalBtn');
-    const helpModal = document.getElementById('helpModal');
-    const openHelpModalBtn = document.getElementById('openHelpModalBtn');
-    const closeHelpModalBtn = document.getElementById('closeHelpModalBtn');
-
-    const teacherTaskTitleInput = document.getElementById('teacherTaskTitleInput');
-    const teacherDifficultySelect = document.getElementById('teacherDifficultySelect');
-    const teacherExpectedOutputInput = document.getElementById('teacherExpectedOutputInput');
-    const teacherTaskDescInput = document.getElementById('teacherTaskDescInput');
-    const teacherStarterCodeInput = document.getElementById('teacherStarterCodeInput');
-    const shareUrlField = document.getElementById('shareUrlField');
-    const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
-    const copiedToast = document.getElementById('copiedToast');
-    const applyToCurrentViewBtn = document.getElementById('applyToCurrentViewBtn');
-
-    // Realtime Live Classroom Elements
-    const roomCodeInput = document.getElementById('roomCodeInput');
-    const connectRoomBtn = document.getElementById('connectRoomBtn');
-    const liveStatusBadge = document.getElementById('liveStatusBadge');
-    const teacherCurrentRoomDisplay = document.getElementById('teacherCurrentRoomDisplay');
-    const broadcastLiveBtn = document.getElementById('broadcastLiveBtn');
-    const liveSubmissionsList = document.getElementById('liveSubmissionsList');
-    const submissionsCountBadge = document.getElementById('submissionsCountBadge');
-
-    let currentRoomCode = "CLASS-1";
-    let isTeacherBroadcasting = false;
-
-    // Python Keywords list for Yellow Highlighting
+    // Reserved Python Keywords for Yellow Highlighting
     const pythonKeywords = new Set([
       'def', 'class', 'if', 'elif', 'else', 'while', 'for', 'in', 'return',
       'import', 'from', 'as', 'try', 'except', 'finally', 'with', 'lambda',
       'True', 'False', 'None', 'and', 'or', 'not', 'is', 'pass', 'break',
-      'continue', 'global', 'nonlocal', 'assert', 'del', 'yield', 'async',
-      'await', 'raise', 'print', 'input', 'range', 'len', 'int', 'str', 'float',
-      'list', 'dict', 'set', 'bool', 'type', 'sum', 'min', 'max'
+      'continue', 'global', 'nonlocal', 'assert', 'del', 'yield', 'print',
+      'input', 'range', 'len', 'int', 'str', 'float', 'list', 'dict', 'set'
     ]);
 
-    // Syntax Highlighting Engine: Yellow for keywords, Red for variables/identifiers
     function highlightPython(code) {
-      // Escape HTML
       const escape = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      
       const tokenRegex = /(#.*$)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b\d+(?:\.\d+)?\b)|(\b[a-zA-Z_]\w*\b)|([^\s\w])/gm;
 
       return code.replace(tokenRegex, (match, comment, string, number, ident, punct) => {
-        if (comment) {
-          return `<span class="token-comment">${escape(comment)}</span>`;
-        }
-        if (string) {
-          return `<span class="token-string">${escape(string)}</span>`;
-        }
-        if (number) {
-          return `<span class="token-number">${escape(number)}</span>`;
-        }
+        if (comment) return `<span class="token-comment">${escape(comment)}</span>`;
+        if (string) return `<span class="token-string">${escape(string)}</span>`;
+        if (number) return `<span class="token-number">${escape(number)}</span>`;
         if (ident) {
-          if (pythonKeywords.has(ident)) {
-            // Reserved keyword: Yellow
-            return `<span class="token-keyword">${escape(ident)}</span>`;
-          } else {
-            // Variable / user identifier: Red
-            return `<span class="token-ident">${escape(ident)}</span>`;
-          }
+          if (pythonKeywords.has(ident)) return `<span class="token-keyword">${escape(ident)}</span>`;
+          return `<span class="token-ident">${escape(ident)}</span>`;
         }
-        if (punct) {
-          return `<span class="token-punctuation">${escape(punct)}</span>`;
-        }
+        if (punct) return `<span class="token-punctuation">${escape(punct)}</span>`;
         return escape(match);
       });
     }
 
     function updateCodeView() {
       const code = pythonCodeArea.value;
-      // Update syntax highlight layer
       codeHighlightDisplay.innerHTML = highlightPython(code) + "\n";
-      
-      // Sync scroll
       codeHighlightDisplay.scrollTop = pythonCodeArea.scrollTop;
       codeHighlightDisplay.scrollLeft = pythonCodeArea.scrollLeft;
 
-      // Update line numbers
       const lines = code.split('\n').length;
       let lineNumStr = '';
       for (let i = 1; i <= Math.max(lines, 1); i++) {
@@ -863,7 +1109,6 @@
       lineNumbers.textContent = lineNumStr;
     }
 
-    // Scroll synchronization
     pythonCodeArea.addEventListener('scroll', () => {
       codeHighlightDisplay.scrollTop = pythonCodeArea.scrollTop;
       codeHighlightDisplay.scrollLeft = pythonCodeArea.scrollLeft;
@@ -871,141 +1116,6 @@
     });
 
     pythonCodeArea.addEventListener('input', updateCodeView);
-
-    // Initialize Pyodide Runtime
-    async function initPyodideRuntime() {
-      try {
-        engineStatusText.textContent = "جارٍ تحميل بايثون...";
-        pyodideInstance = await loadPyodide({
-          stdout: (text) => {
-            appendTerminal(text, 'output');
-          },
-          stderr: (text) => {
-            appendTerminal(text, 'error');
-          }
-        });
-
-        // Setup custom Python input() handler through prompt
-        pyodideInstance.setStdin({
-          stdin: () => {
-            const promptText = window.prompt("الرجاء إدخال القيمة لدالة input():") || "";
-            appendTerminal(promptText + "\n", 'input-echo');
-            return promptText + "\n";
-          }
-        });
-
-        isPyodideLoading = false;
-        engineDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-        engineStatusBadge.className = "flex items-center gap-2 px-3 py-1.5 rounded-xl bg-pink-100 border border-pink-300 text-xs";
-        engineStatusText.innerHTML = '<span class="text-pink-900 font-bold">بايثون 3.11 جاهز 🌸</span>';
-        runCodeBtn.disabled = false;
-      } catch (err) {
-        console.error("Pyodide Loading Error:", err);
-        engineDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
-        engineStatusText.textContent = "تعذر تحميل بايثون";
-        appendTerminal("خطأ: تعذر تحميل بايثون. يرجى التأكد من اتصال الإنترنت.", "error");
-      }
-    }
-
-    function appendTerminal(text, type = 'output') {
-      currentExecutionOutput += text + "\n";
-      const span = document.createElement('div');
-      span.className = 'py-0.5 leading-relaxed font-mono';
-
-      if (type === 'error') {
-        span.className += ' text-rose-400 font-bold';
-        span.textContent = text;
-      } else if (type === 'system') {
-        span.className += ' text-pink-400 font-bold';
-        span.textContent = text;
-      } else if (type === 'success') {
-        span.className += ' text-emerald-400 font-bold';
-        span.textContent = text;
-      } else if (type === 'input-echo') {
-        span.className += ' text-yellow-300 italic';
-        span.textContent = ">> " + text;
-      } else {
-        span.className += ' text-zinc-100';
-        span.textContent = text;
-      }
-
-      terminalScreen.appendChild(span);
-      terminalScreen.scrollTop = terminalScreen.scrollHeight;
-    }
-
-    function clearTerminal() {
-      terminalScreen.innerHTML = '';
-      currentExecutionOutput = "";
-    }
-
-    async function runCode() {
-      if (isPyodideLoading || !pyodideInstance) {
-        showTemporaryNotice("محرك بايثون لا يزال قيد التجهيز، يرجى الانتظار ثوانٍ معدودة...");
-        return;
-      }
-
-      const code = pythonCodeArea.value;
-      if (!code.trim()) {
-        appendTerminal("# الرجاء كتابة كود بايثون أولاً.", "system");
-        return;
-      }
-
-      clearTerminal();
-      appendTerminal("--- جاري تنفيذ البرنامج في بايثون ---", "system");
-      runCodeBtn.disabled = true;
-      runCodeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>جاري التشغيل...</span>';
-
-      try {
-        await pyodideInstance.runPythonAsync(code);
-        appendTerminal("\n--- انتهى التنفيذ بنجاح 🌸 ---", "system");
-      } catch (error) {
-        const cleanError = error.message.replace(/File "<exec>", /g, '');
-        appendTerminal("\nخطأ برمجي:\n" + cleanError, "error");
-      } finally {
-        runCodeBtn.disabled = false;
-        runCodeBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span>تشغيل الكود (Run)</span>';
-      }
-    }
-
-    // Check student solution
-    async function checkStudentSolution() {
-      if (!currentAssignment.expectedOutput) {
-        showFeedback(true, "أحسنتِ! تم تنفيذ الكود بنجاح.");
-        return;
-      }
-
-      await runCode();
-
-      const expected = currentAssignment.expectedOutput.trim();
-      const actual = currentExecutionOutput.trim();
-
-      if (actual.includes(expected)) {
-        showFeedback(true, "🎉 ممتاز جداً! حلك صحيح ومطابق للمطلوب تماماً.");
-      } else {
-        showFeedback(false, "⚠️ المخرجات غير متطابقة بعد! تأكدي من المطلوب والمخرجات المتوقعة ثم جربي مرة أخرى.");
-      }
-    }
-
-    function showFeedback(isSuccess, message) {
-      feedbackAlert.classList.remove('hidden', 'bg-emerald-100', 'text-emerald-800', 'border-emerald-300', 'bg-rose-100', 'text-rose-800', 'border-rose-300');
-      
-      if (isSuccess) {
-        feedbackAlert.classList.add('bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-300');
-      } else {
-        feedbackAlert.classList.add('bg-rose-100', 'text-rose-800', 'border', 'border-rose-300');
-      }
-
-      feedbackAlert.innerHTML = `
-        <div class="flex items-start gap-2">
-          <i class="fa-solid ${isSuccess ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-rose-600'} mt-0.5"></i>
-          <span>${message}</span>
-        </div>
-      `;
-    }
-
-    function showTemporaryNotice(msg) {
-      appendTerminal("تنبيه: " + msg, "error");
-    }
 
     // Tab key support
     pythonCodeArea.addEventListener('keydown', function(e) {
@@ -1019,427 +1129,742 @@
       }
     });
 
-    // Snippets helper
-    document.querySelectorAll('.snippet-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const snippet = btn.getAttribute('data-snippet');
-        const pos = pythonCodeArea.selectionStart;
-        const currentVal = pythonCodeArea.value;
-        pythonCodeArea.value = currentVal.substring(0, pos) + "\n" + snippet + "\n" + currentVal.substring(pos);
-        updateCodeView();
+    // Mobile Quick Key Insertion Toolbar
+    document.querySelectorAll('.quick-key-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const toInsert = btn.getAttribute('data-insert');
+        const start = pythonCodeArea.selectionStart;
+        const end = pythonCodeArea.selectionEnd;
+        
+        let cursorOffset = toInsert.length;
+        if (toInsert === '""' || toInsert === "''" || toInsert === '()' || toInsert === '[]') {
+          cursorOffset = 1;
+        } else if (toInsert === 'print()') {
+          cursorOffset = 6;
+        }
+
+        pythonCodeArea.value = pythonCodeArea.value.substring(0, start) + toInsert + pythonCodeArea.value.substring(end);
+        pythonCodeArea.selectionStart = pythonCodeArea.selectionEnd = start + cursorOffset;
         pythonCodeArea.focus();
+        updateCodeView();
       });
     });
 
-    // Student Submission Handling
-    sendToTeacherBtn.addEventListener('click', async () => {
-      const studentName = studentNameInput.value.trim();
-      const studentClass = studentClassSelect.value;
-      const studentCode = pythonCodeArea.value.trim();
+    // Mobile View Tab Controller
+    function setupMobileTabs() {
+      if (!mobileTabQuestion) return;
 
-      if (!studentName) {
-        showTemporaryNotice("الرجاء كتابة اسم الطالبة أولاً في الحقل المخصص بالأعلى!");
-        studentNameInput.focus();
-        return;
-      }
-
-      if (!studentClass) {
-        showTemporaryNotice("الرجاء اختيار الصف الخاص بكِ من القائمة بالأعلى!");
-        studentClassSelect.focus();
-        return;
-      }
-
-      if (!studentCode) {
-        showTemporaryNotice("لم يتم كتابة أي كود برمجي للإرسال!");
-        return;
-      }
-
-      // Automatically sync submission in realtime to Teacher's Dashboard if connected
-      await submitSolutionToTeacherRealtime(studentName, studentClass, studentCode);
-
-      // Populate Modal for manual alternatives (WhatsApp / Teams report)
-      modalStudentName.textContent = studentName;
-      modalStudentClass.textContent = studentClass;
-      modalTaskTitle.textContent = currentAssignment.title;
-
-      // Prepare Report text
-      const reportText = `🌸 إجابة تمرين بايثون 🌸\n` +
-        `👤 الطالبة: ${studentName}\n` +
-        `🏫 الصف: ${studentClass}\n` +
-        `📌 المهمة: ${currentAssignment.title}\n\n` +
-        `💻 الكود البرمجي:\n\`\`\`python\n${studentCode}\n\`\`\`\n\n` +
-        `📊 آخر مخرجات:\n${currentExecutionOutput.trim() || 'تم الإرسال بدون تشغيل مسبق'}`;
-
-      // Set WhatsApp link
-      const encodedMessage = encodeURIComponent(reportText);
-      whatsappSubmitBtn.href = `https://api.whatsapp.com/send?text=${encodedMessage}`;
-
-      // Save handler for copy report
-      copySubmissionReportBtn.onclick = () => {
-        copyToClipboard(reportText);
-        copyReportSuccess.classList.remove('hidden');
-        setTimeout(() => copyReportSuccess.classList.add('hidden'), 2500);
-      };
-
-      submissionModal.classList.remove('hidden');
-    });
-
-    closeSubmissionModalBtn.addEventListener('click', () => {
-      submissionModal.classList.add('hidden');
-    });
-
-    // Base64 UTF-8 encoder & decoder for URL sharing
-    function encodeAssignmentData(data) {
-      const jsonStr = JSON.stringify(data);
-      return btoa(unescape(encodeURIComponent(jsonStr)));
-    }
-
-    function decodeAssignmentData(base64Str) {
-      try {
-        const jsonStr = decodeURIComponent(escape(atob(base64Str)));
-        return JSON.parse(jsonStr);
-      } catch (e) {
-        return null;
-      }
-    }
-
-    function updateViewWithAssignment(task) {
-      currentAssignment = { ...task };
-      document.getElementById('taskTitle').textContent = task.title || "تحدي بايثون";
-      document.getElementById('taskDifficulty').textContent = task.difficulty || "مبتدئ";
-      document.getElementById('taskDescription').textContent = task.desc || "";
-      
-      const expectedBox = document.getElementById('expectedOutputBox');
-      const expectedText = document.getElementById('expectedOutputText');
-      if (task.expectedOutput && task.expectedOutput.trim() !== '') {
-        expectedBox.classList.remove('hidden');
-        expectedText.textContent = task.expectedOutput;
-      } else {
-        expectedBox.classList.add('hidden');
-      }
-
-      pythonCodeArea.value = task.starterCode || "";
-      updateCodeView();
-      feedbackAlert.classList.add('hidden');
-    }
-
-    function generateTeacherShareLink() {
-      const assignmentData = {
-        title: teacherTaskTitleInput.value.trim() || "تحدي بايثون",
-        difficulty: teacherDifficultySelect.value,
-        desc: teacherTaskDescInput.value.trim(),
-        starterCode: teacherStarterCodeInput.value,
-        expectedOutput: teacherExpectedOutputInput.value.trim()
-      };
-
-      const encoded = encodeAssignmentData(assignmentData);
-      const url = new URL(window.location.href);
-      url.searchParams.set('task', encoded);
-      shareUrlField.value = url.toString();
-      return assignmentData;
-    }
-
-    function loadAssignmentFromURL() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const taskParam = urlParams.get('task');
-      if (taskParam) {
-        const decoded = decodeAssignmentData(taskParam);
-        if (decoded) {
-          updateViewWithAssignment(decoded);
+      function switchMobileView(activeTab) {
+        if (window.innerWidth >= 1024) {
+          questionSectionWrapper.classList.remove('hidden');
+          editorSectionWrapper.classList.remove('hidden');
+          terminalSectionWrapper.classList.remove('hidden');
           return;
         }
+
+        mobileTabQuestion.className = "flex-1 py-1.5 rounded-xl text-slate-600 flex items-center justify-center gap-1 transition";
+        mobileTabEditor.className = "flex-1 py-1.5 rounded-xl text-slate-600 flex items-center justify-center gap-1 transition";
+        mobileTabTerminal.className = "flex-1 py-1.5 rounded-xl text-slate-600 flex items-center justify-center gap-1 transition";
+
+        if (activeTab === 'question') {
+          mobileTabQuestion.className = "flex-1 py-1.5 rounded-xl bg-white shadow-sm text-pink-600 flex items-center justify-center gap-1 transition";
+          questionSectionWrapper.classList.remove('hidden');
+          editorSectionWrapper.classList.add('hidden');
+        } else if (activeTab === 'editor') {
+          mobileTabEditor.className = "flex-1 py-1.5 rounded-xl bg-white shadow-sm text-pink-600 flex items-center justify-center gap-1 transition";
+          questionSectionWrapper.classList.add('hidden');
+          editorSectionWrapper.classList.remove('hidden');
+          terminalSectionWrapper.classList.remove('hidden');
+        } else if (activeTab === 'terminal') {
+          mobileTabTerminal.className = "flex-1 py-1.5 rounded-xl bg-white shadow-sm text-pink-600 flex items-center justify-center gap-1 transition";
+          questionSectionWrapper.classList.add('hidden');
+          editorSectionWrapper.classList.remove('hidden');
+          terminalSectionWrapper.classList.remove('hidden');
+          terminalSectionWrapper.scrollIntoView({ behavior: 'smooth' });
+        }
       }
-      updateViewWithAssignment(defaultAssignment);
+
+      mobileTabQuestion.addEventListener('click', () => switchMobileView('question'));
+      mobileTabEditor.addEventListener('click', () => switchMobileView('editor'));
+      mobileTabTerminal.addEventListener('click', () => switchMobileView('terminal'));
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+          questionSectionWrapper.classList.remove('hidden');
+          editorSectionWrapper.classList.remove('hidden');
+          terminalSectionWrapper.classList.remove('hidden');
+        }
+      });
     }
 
-    // Button event listeners
-    runCodeBtn.addEventListener('click', runCode);
-    checkSolutionBtn.addEventListener('click', checkStudentSolution);
-    clearConsoleBtn.addEventListener('click', clearTerminal);
+    // Sidebar Drawer Functions
+    function openCurriculumSidebar() {
+      curriculumSidebarOverlay.classList.remove('hidden');
+      setTimeout(() => {
+        curriculumSidebarOverlay.classList.add('opacity-100');
+        curriculumSidebar.classList.remove('translate-x-full');
+      }, 10);
+    }
 
+    function closeCurriculumSidebar() {
+      curriculumSidebar.classList.add('translate-x-full');
+      curriculumSidebarOverlay.classList.remove('opacity-100');
+      setTimeout(() => {
+        curriculumSidebarOverlay.classList.add('hidden');
+      }, 300);
+    }
+
+    toggleCurriculumSidebarBtn.addEventListener('click', openCurriculumSidebar);
+    closeCurriculumSidebarBtn.addEventListener('click', closeCurriculumSidebar);
+    curriculumSidebarOverlay.addEventListener('click', closeCurriculumSidebar);
+
+    function switchCurriculumGrade(grade) {
+      currentSelectedCurriculumGrade = grade;
+      if (grade === "العاشر") {
+        btnSwitchGrade10.className = "flex-1 py-2 px-3 rounded-xl bg-pink-600 text-white font-bold text-xs transition shadow-sm";
+        btnSwitchGrade11.className = "flex-1 py-2 px-3 rounded-xl bg-white text-pink-800 font-bold text-xs border border-pink-200 transition";
+        sidebarStageName.textContent = "خطة الصف العاشر (بايثون - الفصل الأول)";
+        curriculumStageBadge.textContent = "عاشر";
+      } else {
+        btnSwitchGrade11.className = "flex-1 py-2 px-3 rounded-xl bg-pink-600 text-white font-bold text-xs transition shadow-sm";
+        btnSwitchGrade10.className = "flex-1 py-2 px-3 rounded-xl bg-white text-pink-800 font-bold text-xs border border-pink-200 transition";
+        sidebarStageName.textContent = "خطة الصف الحادي عشر (قواعد البيانات SQLite)";
+        curriculumStageBadge.textContent = "11";
+      }
+      renderCurriculumLessonsList(grade);
+    }
+
+    btnSwitchGrade10.addEventListener('click', () => switchCurriculumGrade("العاشر"));
+    btnSwitchGrade11.addEventListener('click', () => switchCurriculumGrade("الحادي عشر"));
+
+    function renderCurriculumLessonsList(grade) {
+      const lessons = curriculumData[grade] || [];
+      lessonsListContainer.innerHTML = '';
+
+      lessons.forEach((lesson) => {
+        const card = document.createElement('div');
+        const isActive = activeLessonParent && activeLessonParent.id === lesson.id;
+        card.className = `p-3 rounded-2xl border transition cursor-pointer flex flex-col gap-1.5 ${
+          isActive 
+            ? 'bg-pink-100/90 border-pink-400 shadow-sm' 
+            : 'bg-white hover:bg-pink-50/70 border-pink-100'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-200/80 text-pink-900">${lesson.worksheet}</span>
+            <span class="text-[11px] text-pink-600 font-semibold font-mono">${lesson.week}</span>
+          </div>
+          <h4 class="font-bold text-pink-950 text-xs sm:text-sm leading-snug">${lesson.title}</h4>
+          <p class="text-[11px] text-slate-600 line-clamp-2">${lesson.desc}</p>
+          <div class="flex items-center justify-between pt-1 border-t border-pink-100/60 text-[10px]">
+            <span class="text-pink-600 font-bold">ورقة الكتاب + تمرين تطبيقي</span>
+            <span class="text-pink-700 font-bold flex items-center gap-1">عرض في الشاشة <i class="fa-solid fa-arrow-left"></i></span>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          activeLessonParent = lesson;
+          loadLessonMode(false); // افتراضياً فتح ورقة عمل الكتاب المحلولة
+          closeCurriculumSidebar();
+          showNotice(`✨ تم فتح ورقة عمل (${lesson.worksheet}): ${lesson.title}`, "info");
+        });
+
+        lessonsListContainer.appendChild(card);
+      });
+    }
+
+    // التبديل بين ورقة العمل المحلولة والتمرين التطبيقي غير المحلول
+    function loadLessonMode(practice) {
+      isPracticeMode = practice;
+      if (!activeLessonParent) return;
+
+      if (!practice) {
+        // وضع ورقة عمل الكتاب المحلولة
+        btnModeSolution.className = "flex-1 py-1.5 px-2 rounded-xl bg-white text-pink-800 shadow-sm transition flex items-center justify-center gap-1";
+        btnModePractice.className = "flex-1 py-1.5 px-2 rounded-xl text-pink-700 hover:bg-white/50 transition flex items-center justify-center gap-1";
+        
+        renderTask({
+          id: activeLessonParent.id,
+          title: `${activeLessonParent.worksheet}: ${activeLessonParent.title}`,
+          badge: "ورقة الكتاب (محلولة)",
+          desc: activeLessonParent.desc,
+          starterCode: activeLessonParent.starterCode,
+          expectedOutput: activeLessonParent.expectedOutput
+        });
+      } else {
+        // وضع التمرين التطبيقي غير المحلول
+        btnModePractice.className = "flex-1 py-1.5 px-2 rounded-xl bg-white text-pink-800 shadow-sm transition flex items-center justify-center gap-1";
+        btnModeSolution.className = "flex-1 py-1.5 px-2 rounded-xl text-pink-700 hover:bg-white/50 transition flex items-center justify-center gap-1";
+        
+        const pr = activeLessonParent.practice || {
+          title: "تمرين تطبيقي إضافي",
+          desc: "طبقي المفهوم البرمجي بنفسك وافحصي النتيجة.",
+          starterCode: "# اكتبي كود التمرين هنا...\n",
+          expectedOutput: ""
+        };
+
+        renderTask({
+          id: activeLessonParent.id + "_practice",
+          title: pr.title,
+          badge: "تمرين للتطبيق ✏️",
+          desc: pr.desc,
+          starterCode: pr.starterCode,
+          expectedOutput: pr.expectedOutput
+        });
+      }
+    }
+
+    btnModeSolution.addEventListener('click', () => loadLessonMode(false));
+    btnModePractice.addEventListener('click', () => loadLessonMode(true));
+
+    // Initialize Pyodide Runtime
+    async function initPyodide() {
+      try {
+        pyodideInstance = await loadPyodide({
+          stdout: (text) => appendTerminal(text, 'output'),
+          stderr: (text) => appendTerminal(text, 'error')
+        });
+
+        // Interactive input() support
+        pyodideInstance.setStdin({
+          stdin: () => {
+            const promptText = window.prompt("الرجاء إدخال القيمة لدالة input():") || "";
+            appendTerminal(promptText + "\n", 'echo');
+            return promptText + "\n";
+          }
+        });
+
+        isPyodideReady = true;
+        engineDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+        engineStatusText.textContent = "بايثون جاهز 🌸";
+        runCodeBtn.disabled = false;
+      } catch (err) {
+        engineDot.className = "w-2 h-2 rounded-full bg-rose-500";
+        engineStatusText.textContent = "تعذر تحميل بايثون";
+        appendTerminal("تعذر تحميل بايثون، يرجى التأكد من اتصال الإنترنت.", "error");
+      }
+    }
+
+    function appendTerminal(text, type = 'output') {
+      currentOutput += text + "\n";
+      const div = document.createElement('div');
+      div.className = 'py-0.5 leading-relaxed font-mono';
+
+      if (type === 'error') {
+        div.className += ' text-rose-400 font-bold';
+        div.textContent = text;
+      } else if (type === 'system') {
+        div.className += ' text-pink-400 font-semibold';
+        div.textContent = text;
+      } else if (type === 'echo') {
+        div.className += ' text-yellow-300 italic';
+        div.textContent = ">> " + text;
+      } else {
+        div.className += ' text-zinc-100';
+        div.textContent = text;
+      }
+
+      terminalScreen.appendChild(div);
+      terminalScreen.scrollTop = terminalScreen.scrollHeight;
+    }
+
+    function clearTerminal() {
+      terminalScreen.innerHTML = '';
+      currentOutput = "";
+    }
+
+    async function runCode() {
+      if (!isPyodideReady || !pyodideInstance) {
+        appendTerminal("جارٍ تجهيز محرك بايثون، يرجى الانتظار...", "system");
+        return;
+      }
+
+      const code = pythonCodeArea.value;
+      if (!code.trim()) {
+        appendTerminal("# الرجاء كتابة كود بايثون أولاً.", "system");
+        return;
+      }
+
+      clearTerminal();
+      appendTerminal("--- جاري تنفيذ الكود ---", "system");
+      runCodeBtn.disabled = true;
+
+      if (window.innerWidth < 1024 && mobileTabTerminal) {
+        terminalSectionWrapper.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      try {
+        await pyodideInstance.runPythonAsync(code);
+        appendTerminal("\n--- تم التنفيذ بنجاح 🌸 ---", "system");
+      } catch (error) {
+        const cleanError = error.message.replace(/File "<exec>", /g, '');
+        appendTerminal("\nخطأ:\n" + cleanError, "error");
+      } finally {
+        runCodeBtn.disabled = false;
+      }
+    }
+
+    // Smart Auto-Grading normalization function
+    function normalizeOutput(str) {
+      if (!str) return "";
+      return str
+        .replace(/--- جاري تنفيذ الكود ---/g, '')
+        .replace(/--- تم التنفيذ بنجاح 🌸 ---/g, '')
+        .replace(/\r\n/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join('\n')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+    }
+
+    function checkAnswer(silent = false) {
+      if (!activeTask.expectedOutput || !activeTask.expectedOutput.trim()) {
+        if (!silent) showNotice("هذا السؤال للتطبيق المفتوح وليس له مخرج مقيد.", "info");
+        return { isCorrect: true, reason: 'open' };
+      }
+
+      const cleanExpected = normalizeOutput(activeTask.expectedOutput);
+      const cleanActual = normalizeOutput(currentOutput);
+
+      const isMatch = cleanActual === cleanExpected || cleanActual.includes(cleanExpected);
+
+      if (isMatch) {
+        if (!silent) {
+          showNotice("🎉 أحسنتِ يا بطلة! الإجابة صحيحة 100% والمخرجات متطابقة تماماً.", "success");
+        }
+        return { isCorrect: true, reason: 'matched' };
+      } else {
+        if (!silent) {
+          showNotice("💡 حلكِ لم ينتج المخرجات المطلوبة تماماً. راجعي المطلوب وحاولي ثانية!", "error");
+        }
+        return { isCorrect: false, reason: 'mismatch' };
+      }
+    }
+
+    runCodeBtn.addEventListener('click', runCode);
+    clearConsoleBtn.addEventListener('click', clearTerminal);
     clearEditorBtn.addEventListener('click', () => {
       pythonCodeArea.value = '';
       updateCodeView();
       pythonCodeArea.focus();
     });
 
-    copyCodeBtn.addEventListener('click', () => {
-      copyToClipboard(pythonCodeArea.value);
-      appendTerminal("# تم نسخ الكود إلى الحافظة بنجاح.", "system");
-    });
-
-    loadStarterCodeBtn.addEventListener('click', () => {
-      pythonCodeArea.value = currentAssignment.starterCode || "";
-      updateCodeView();
-      feedbackAlert.classList.add('hidden');
-      appendTerminal("# تم استعادة السؤال والكود المبدئي.", "system");
-    });
-
-    // Modals Handlers
-    openTeacherModalBtn.addEventListener('click', () => {
-      teacherTaskTitleInput.value = currentAssignment.title;
-      teacherDifficultySelect.value = currentAssignment.difficulty;
-      teacherTaskDescInput.value = currentAssignment.desc;
-      teacherStarterCodeInput.value = currentAssignment.starterCode;
-      teacherExpectedOutputInput.value = currentAssignment.expectedOutput || '';
-      generateTeacherShareLink();
-      teacherModal.classList.remove('hidden');
-    });
-
-    closeTeacherModalBtn.addEventListener('click', () => {
-      teacherModal.classList.add('hidden');
-    });
-
-    openHelpModalBtn.addEventListener('click', () => {
-      helpModal.classList.remove('hidden');
-    });
-
-    closeHelpModalBtn.addEventListener('click', () => {
-      helpModal.classList.add('hidden');
-    });
-
-    [teacherTaskTitleInput, teacherDifficultySelect, teacherTaskDescInput, teacherStarterCodeInput, teacherExpectedOutputInput].forEach(el => {
-      el.addEventListener('input', generateTeacherShareLink);
-    });
-
-    document.querySelectorAll('.teacher-preset-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const presetKey = btn.getAttribute('data-preset');
-        const p = teacherPresets[presetKey];
-        if (p) {
-          teacherTaskTitleInput.value = p.title;
-          teacherDifficultySelect.value = p.difficulty;
-          teacherTaskDescInput.value = p.desc;
-          teacherStarterCodeInput.value = p.starterCode;
-          teacherExpectedOutputInput.value = p.expectedOutput;
-          generateTeacherShareLink();
-        }
+    // Setup Multi-Teacher Selector for Students
+    function initTeacherSelectOptions() {
+      studentTeacherSelect.innerHTML = '<option value="" disabled selected>اختاري معلمتكِ...</option>';
+      Object.keys(teachersDatabase).forEach(pin => {
+        const t = teachersDatabase[pin];
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        studentTeacherSelect.appendChild(opt);
       });
-    });
 
-    copyShareUrlBtn.addEventListener('click', () => {
-      copyToClipboard(shareUrlField.value);
-      copiedToast.classList.remove('hidden');
-      setTimeout(() => copiedToast.classList.add('hidden'), 2500);
-    });
-
-    applyToCurrentViewBtn.addEventListener('click', () => {
-      const task = generateTeacherShareLink();
-      updateViewWithAssignment(task);
-      teacherModal.classList.add('hidden');
-      appendTerminal("# تم تطبيق السؤال الجديد في الشاشة بنجاح! 🌸", "success");
-    });
-
-    // --- REALTIME CLASSROOM ENGINE (FIRESTORE) ---
-
-    function getNormalizedRoomCode() {
-      const val = roomCodeInput.value.trim().toUpperCase() || 'CLASS-1';
-      return val.replace(/[^A-Z0-9_-]/g, '');
+      // Default select first teacher (أ. وفاء عليان)
+      studentTeacherSelect.value = "wafaa";
+      onTeacherChanged("wafaa");
     }
 
-    // Subscribe to current room changes
-    function setupRoomSubscription(roomCode) {
-      if (!window.LiveSync || !window.LiveSync.db) return;
+    function onTeacherChanged(teacherId) {
+      selectedTeacherId = teacherId;
+      const teacherObj = Object.values(teachersDatabase).find(t => t.id === teacherId);
+      if (!teacherObj) return;
 
-      const { db, appId, doc, collection, onSnapshot } = window.LiveSync;
+      studentHeaderTeacherIndicator.textContent = `المعلمة: ${teacherObj.name}`;
+      renderTask(teacherObj.task);
+    }
 
-      // Clean up previous listeners
-      if (window.LiveSync.currentUnsubTask) {
-        window.LiveSync.currentUnsubTask();
-        window.LiveSync.currentUnsubTask = null;
-      }
-      if (window.LiveSync.currentUnsubSubmissions) {
-        window.LiveSync.currentUnsubSubmissions();
-        window.LiveSync.currentUnsubSubmissions = null;
-      }
+    studentTeacherSelect.addEventListener('change', function() {
+      onTeacherChanged(this.value);
+    });
 
-      currentRoomCode = roomCode;
-      teacherCurrentRoomDisplay.textContent = roomCode;
-      liveStatusBadge.textContent = `غرفة: ${roomCode}`;
-      liveStatusBadge.className = "bg-emerald-400 text-emerald-950 text-[10px] px-2 py-0.5 rounded-full font-bold";
-
-      // Corrected 6-segment path: collection(artifacts) -> doc(appId) -> collection(public) -> doc(data) -> collection(rooms) -> doc(roomCode)
-      const taskDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomCode);
-
-      window.LiveSync.currentUnsubTask = onSnapshot(taskDocRef, (snap) => {
-        if (snap.exists()) {
-          const remoteTask = snap.data();
-          // Check if this task is newly sent and not currently being drafted by teacher
-          if (remoteTask && remoteTask.title) {
-            const isDifferent = (remoteTask.title !== currentAssignment.title || remoteTask.desc !== currentAssignment.desc);
-            if (isDifferent && !isTeacherBroadcasting) {
-              updateViewWithAssignment(remoteTask);
-              appendTerminal(`\n🔔 إشعار: قامت المعلمة ببث تمرين جديد: "${remoteTask.title}" 🌸`, 'system');
-              
-              // Flash notification visual effect
-              document.getElementById('taskTitle').parentElement.classList.add('animate-bounce');
-              setTimeout(() => {
-                document.getElementById('taskTitle').parentElement.classList.remove('animate-bounce');
-              }, 1800);
-            }
-          }
-        }
-      }, (err) => {
-        console.warn("Task subscription error:", err);
-      });
-
-      // Corrected collection path: artifacts/{appId}/public/data/submissions
-      const submissionsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
-      window.LiveSync.currentUnsubSubmissions = onSnapshot(submissionsColRef, (snapshot) => {
-        const matchingSubmissions = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (data && data.roomCode === roomCode && data.type === 'student_solution') {
-            matchingSubmissions.push(data);
-          }
+    // Dynamic Class & Student Selection Logic
+    studentStageSelect.addEventListener('change', function() {
+      const selectedStage = this.value;
+      studentClassSelect.innerHTML = '<option value="" disabled selected>اختاري الصف...</option>';
+      
+      if (classData[selectedStage]) {
+        classData[selectedStage].forEach(cls => {
+          const opt = document.createElement('option');
+          opt.value = cls;
+          opt.textContent = cls;
+          studentClassSelect.appendChild(opt);
         });
-        
-        // Sort in memory by time descending (RULE 2: No complex queries)
-        matchingSubmissions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        renderLiveSubmissions(matchingSubmissions);
-      }, (err) => {
-        console.warn("Submissions subscription error:", err);
-      });
+        studentClassSelect.disabled = false;
+      } else {
+        studentClassSelect.disabled = true;
+      }
+      
+      resetStudentNameField();
+
+      // Automatically sync sidebar grade with selected stage
+      if (selectedStage.includes("الحادي عشر")) {
+        switchCurriculumGrade("الحادي عشر");
+      } else if (selectedStage.includes("العاشر")) {
+        switchCurriculumGrade("العاشر");
+      }
+    });
+
+    studentClassSelect.addEventListener('change', function() {
+      const selectedClass = this.value;
+      if (selectedClass === "عاشر 3" && students10_3.length > 0) {
+        studentNameSelect.innerHTML = '<option value="" disabled selected>اختاري اسمكِ من القائمة...</option>';
+        students10_3.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          studentNameSelect.appendChild(opt);
+        });
+        studentNameInput.classList.add('hidden');
+        studentNameSelect.classList.remove('hidden');
+      } else {
+        resetStudentNameField();
+      }
+    });
+
+    function resetStudentNameField() {
+      studentNameSelect.classList.add('hidden');
+      studentNameInput.classList.remove('hidden');
     }
 
-    // Render Submissions in Teacher Dashboard
-    function renderLiveSubmissions(list) {
-      submissionsCountBadge.textContent = list.length;
-      if (!list || list.length === 0) {
-        liveSubmissionsList.innerHTML = `<div class="text-center py-4 text-xs text-pink-400">لا توجد إجابات مرسلة حتى الآن في هذه الغرفة...</div>`;
+    function getSelectedStudentName() {
+      if (!studentNameSelect.classList.contains('hidden') && studentNameSelect.value) {
+        return studentNameSelect.value.trim();
+      }
+      return studentNameInput.value.trim();
+    }
+
+    testSolutionBtn.addEventListener('click', async () => {
+      await runCode();
+      checkAnswer(false);
+    });
+
+    // Set Task to UI
+    function renderTask(task) {
+      activeTask = { ...task };
+      taskTitle.textContent = task.title;
+      taskTypeBadge.textContent = task.badge || "ورقة عمل";
+      taskDescription.textContent = task.desc;
+
+      if (task.expectedOutput && task.expectedOutput.trim() !== '') {
+        expectedOutputBox.classList.remove('hidden');
+        expectedOutputText.textContent = task.expectedOutput;
+      } else {
+        expectedOutputBox.classList.add('hidden');
+      }
+
+      pythonCodeArea.value = task.starterCode || "";
+      updateCodeView();
+
+      // Refresh Sidebar Highlight if visible
+      renderCurriculumLessonsList(currentSelectedCurriculumGrade);
+    }
+
+    resetCodeBtn.addEventListener('click', () => {
+      pythonCodeArea.value = activeTask.starterCode || "";
+      updateCodeView();
+      appendTerminal("# تمت استعادة الكود الأصلي للسؤال.", "system");
+    });
+
+    // Student Submit Handler - Tightly bound to Selected Teacher
+    submitSolutionBtn.addEventListener('click', async () => {
+      const targetTeacherId = studentTeacherSelect.value;
+      const stage = studentStageSelect.value;
+      const studentClass = studentClassSelect.value;
+      const studentName = getSelectedStudentName();
+      const studentCode = pythonCodeArea.value.trim();
+
+      if (!targetTeacherId) {
+        showNotice("⚠️ يرجى اختيار اسم معلمتكِ أولاً!", "error");
+        studentTeacherSelect.focus();
         return;
       }
 
-      liveSubmissionsList.innerHTML = '';
-      list.forEach((sub) => {
-        const item = document.createElement('div');
-        item.className = "p-2.5 rounded-xl bg-white border border-pink-200 text-xs flex flex-col gap-1.5 shadow-sm";
+      if (!stage) {
+        showNotice("⚠️ يرجى اختيار المرحلة الدراسية!", "error");
+        studentStageSelect.focus();
+        return;
+      }
+
+      if (!studentClass) {
+        showNotice("⚠️ يرجى اختيار الصف من القائمة!", "error");
+        studentClassSelect.focus();
+        return;
+      }
+
+      if (!studentName) {
+        showNotice("⚠️ يرجى تحديد أو كتابة اسمكِ في الحقل المخصص!", "error");
+        if (studentNameSelect.classList.contains('hidden')) {
+          studentNameInput.focus();
+        } else {
+          studentNameSelect.focus();
+        }
+        return;
+      }
+
+      if (!studentCode) {
+        showNotice("⚠️ لم تقومي بكتابة أي كود لإرساله!", "error");
+        return;
+      }
+
+      // Automatically run to get the latest output
+      await runCode();
+      const evalResult = checkAnswer(true);
+
+      const targetTeacherObj = Object.values(teachersDatabase).find(t => t.id === targetTeacherId);
+
+      // Record Submission with explicit teacherId isolation tag
+      const submission = {
+        id: Date.now(),
+        teacherId: targetTeacherId,
+        teacherName: targetTeacherObj ? targetTeacherObj.name : "المعلمة",
+        studentName,
+        stage,
+        studentClass: `${stage} - ${studentClass}`,
+        taskTitle: activeTask.title,
+        code: studentCode,
+        output: currentOutput.trim() || 'بدون مخرجات',
+        isCorrect: evalResult.isCorrect,
+        time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      submissions.unshift(submission);
+      
+      // If the teacher dashboard is open and belongs to this teacher, update view
+      if (loggedInTeacher && loggedInTeacher.id === targetTeacherId) {
+        updateSubmissionsUI();
+      }
+
+      if (evalResult.isCorrect) {
+        showNotice(`🎉 ممتازة يا ${studentName}! حلكِ صحيح 100% وتم إرساله إلى ${targetTeacherObj ? targetTeacherObj.name : "معلمتكِ"}.`, "success");
+      } else {
+        showNotice(`تم إرسال إجابتكِ بنجاح إلى ${targetTeacherObj ? targetTeacherObj.name : "معلمتكِ"} (يمكنكِ المحاولة ثانيةً لتحسين النتيجة).`, "info");
+      }
+    });
+
+    function showNotice(msg, type) {
+      submissionNotice.classList.remove('hidden', 'bg-emerald-100', 'text-emerald-800', 'border-emerald-300', 'bg-rose-100', 'text-rose-800', 'border-rose-300', 'bg-sky-100', 'text-sky-800', 'border-sky-300');
+      if (type === 'success') {
+        submissionNotice.classList.add('bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-300');
+      } else if (type === 'error') {
+        submissionNotice.classList.add('bg-rose-100', 'text-rose-800', 'border', 'border-rose-300');
+      } else {
+        submissionNotice.classList.add('bg-sky-100', 'text-sky-800', 'border', 'border-sky-300');
+      }
+      submissionNotice.textContent = msg;
+      setTimeout(() => {
+        submissionNotice.classList.add('hidden');
+      }, 5500);
+    }
+
+    // Secret Teacher Access Trigger
+    let logoClickCount = 0;
+    let logoClickTimer = null;
+
+    brandLogoTrigger.addEventListener('click', () => {
+      logoClickCount++;
+      clearTimeout(logoClickTimer);
+      if (logoClickCount >= 3) {
+        logoClickCount = 0;
+        triggerTeacherAccess();
+      } else {
+        logoClickTimer = setTimeout(() => {
+          logoClickCount = 0;
+        }, 600);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey && (e.key === 'm' || e.key === 'M')) || (e.ctrlKey && e.altKey && (e.key === 't' || e.key === 'T'))) {
+        e.preventDefault();
+        triggerTeacherAccess();
+      }
+    });
+
+    function triggerTeacherAccess() {
+      if (loggedInTeacher) {
+        openTeacherDashboard();
+      } else {
+        teacherPinInput.value = '';
+        loginErrorMsg.classList.add('hidden');
+        teacherLoginModal.classList.remove('hidden');
+        setTimeout(() => teacherPinInput.focus(), 150);
+      }
+    }
+
+    openTeacherDashboardDirectBtn.addEventListener('click', openTeacherDashboard);
+
+    closeTeacherLoginModalBtn.addEventListener('click', () => {
+      teacherLoginModal.classList.add('hidden');
+      teacherPinInput.value = '';
+    });
+
+    // Multi-Teacher Login verification
+    function handleTeacherLogin() {
+      const pin = teacherPinInput.value.trim();
+      if (teachersDatabase[pin]) {
+        loggedInTeacher = teachersDatabase[pin];
+        teacherLoginModal.classList.add('hidden');
+        teacherPinInput.value = '';
         
-        const timeStr = sub.timestamp ? new Date(sub.timestamp).toLocaleTimeString('ar-SA') : '';
-        item.innerHTML = `
+        // Show personalized teacher buttons
+        activeTeacherNameLabel.textContent = `لوحة ${loggedInTeacher.name}`;
+        openTeacherDashboardDirectBtn.classList.remove('hidden');
+        openTeacherDashboardDirectBtn.classList.add('flex');
+        teacherLogoutBtn.classList.remove('hidden');
+        teacherLogoutBtn.classList.add('flex');
+        
+        openTeacherDashboard();
+      } else {
+        loginErrorMsg.classList.remove('hidden');
+        teacherPinInput.value = '';
+        teacherPinInput.focus();
+      }
+    }
+
+    submitTeacherLoginBtn.addEventListener('click', handleTeacherLogin);
+    teacherPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleTeacherLogin();
+    });
+
+    teacherLogoutBtn.addEventListener('click', () => {
+      loggedInTeacher = null;
+      openTeacherDashboardDirectBtn.classList.add('hidden');
+      openTeacherDashboardDirectBtn.classList.remove('flex');
+      teacherLogoutBtn.classList.add('hidden');
+      teacherLogoutBtn.classList.remove('flex');
+      teacherDashboardModal.classList.add('hidden');
+      teacherPinInput.value = '';
+    });
+
+    function openTeacherDashboard() {
+      if (!loggedInTeacher) return;
+
+      currentTeacherProfileName.textContent = loggedInTeacher.name;
+      currentTeacherStagesTag.textContent = `لوحة متابعة وإعداد الأسئلة الخاصة بكِ`;
+      broadcastTargetTeacher.textContent = loggedInTeacher.name;
+
+      teacherTaskTitle.value = loggedInTeacher.task.title;
+      teacherTaskDesc.value = loggedInTeacher.task.desc;
+      teacherStarterCode.value = loggedInTeacher.task.starterCode;
+      teacherExpectedOutput.value = loggedInTeacher.task.expectedOutput || '';
+
+      updateSubmissionsUI();
+      teacherDashboardModal.classList.remove('hidden');
+    }
+
+    closeTeacherDashboardBtn.addEventListener('click', () => {
+      teacherDashboardModal.classList.add('hidden');
+    });
+
+    // Switch Dashboard Tabs
+    tabCreateTaskBtn.addEventListener('click', () => {
+      tabCreateTaskBtn.className = "flex-1 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition";
+      tabSubmissionsBtn.className = "flex-1 py-2 rounded-xl bg-pink-100 text-pink-800 text-xs font-bold transition";
+      tabCreateTaskContent.classList.remove('hidden');
+      tabSubmissionsContent.classList.add('hidden');
+    });
+
+    tabSubmissionsBtn.addEventListener('click', () => {
+      tabSubmissionsBtn.className = "flex-1 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold transition";
+      tabCreateTaskBtn.className = "flex-1 py-2 rounded-xl bg-pink-100 text-pink-800 text-xs font-bold transition";
+      tabSubmissionsContent.classList.remove('hidden');
+      tabCreateTaskContent.classList.add('hidden');
+    });
+
+    // Broadcast new Task - Updates only this teacher's assignment
+    broadcastTaskBtn.addEventListener('click', () => {
+      if (!loggedInTeacher) return;
+
+      const title = teacherTaskTitle.value.trim() || `تحدي بايثون - ${loggedInTeacher.name}`;
+      const desc = teacherTaskDesc.value.trim() || "اكتبي الكود المطلوب.";
+      const starterCode = teacherStarterCode.value;
+      const expectedOutput = teacherExpectedOutput.value.trim();
+
+      // Save to teacher's specific record
+      loggedInTeacher.task = {
+        title,
+        badge: "سؤال المعلمة 📢",
+        desc,
+        starterCode,
+        expectedOutput
+      };
+
+      // If the currently viewed student view has this teacher selected, reflect changes immediately
+      if (studentTeacherSelect.value === loggedInTeacher.id) {
+        renderTask(loggedInTeacher.task);
+      }
+
+      teacherDashboardModal.classList.add('hidden');
+      showNotice(`✨ تم حفظ وتحديث السؤال لطالبات (${loggedInTeacher.name}) بنجاح!`, "success");
+      appendTerminal(`\n🔔 تم إدراج سؤال جديد للمعلمة ${loggedInTeacher.name}: "${title}"`, "system");
+    });
+
+    // Strictly Filter Submissions by Logged-in Teacher
+    function updateSubmissionsUI() {
+      if (!loggedInTeacher) return;
+
+      // Filter only submissions intended for THIS teacher!
+      const teacherSubmissions = submissions.filter(s => s.teacherId === loggedInTeacher.id);
+      submissionsCounter.textContent = teacherSubmissions.length;
+
+      if (teacherSubmissions.length === 0) {
+        submissionsListContainer.innerHTML = `<div class="text-center py-8 text-xs text-pink-400">لا توجد إجابات مرسلة من طالباتكِ (${loggedInTeacher.name}) حتى الآن...</div>`;
+        return;
+      }
+
+      submissionsListContainer.innerHTML = '';
+      teacherSubmissions.forEach((item) => {
+        const card = document.createElement('div');
+        const statusBadge = item.isCorrect 
+          ? `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">مكتمل وصحيح 100% ✨</span>`
+          : `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">يحتاج مراجعة ⚠️</span>`;
+
+        card.className = "p-3 rounded-2xl bg-pink-50 border border-pink-200 text-xs flex flex-col gap-2";
+        card.innerHTML = `
           <div class="flex items-center justify-between font-bold text-pink-950">
             <span class="flex items-center gap-1.5">
-              <i class="fa-solid fa-user-graduate text-pink-500"></i>
-              ${sub.studentName} <span class="text-[10px] text-pink-600 font-semibold">(${sub.studentClass})</span>
+              <i class="fa-solid fa-circle-check ${item.isCorrect ? 'text-emerald-500' : 'text-amber-500'}"></i>
+              ${item.studentName} <span class="text-[11px] text-pink-600 font-semibold">(${item.studentClass})</span>
             </span>
-            <span class="text-[10px] text-slate-400 font-mono">${timeStr}</span>
+            <div class="flex items-center gap-2">
+              ${statusBadge}
+              <span class="text-[10px] text-slate-400 font-mono">${item.time}</span>
+            </div>
           </div>
-          <div class="text-[11px] text-slate-600">المهمة: <span class="font-semibold text-pink-900">${sub.taskTitle || ''}</span></div>
-          <div class="bg-black text-red-400 p-2 rounded-lg font-mono text-[11px] max-h-20 overflow-y-auto whitespace-pre direction-ltr text-left border border-zinc-800">${sub.code}</div>
+          <div class="text-[11px] text-slate-700">المهمة: <span class="font-semibold text-pink-900">${item.taskTitle}</span></div>
+          <div class="bg-black text-red-400 p-2 rounded-xl font-mono text-[11px] whitespace-pre overflow-x-auto direction-ltr text-left border border-zinc-800">${item.code}</div>
+          <div class="text-[10px] text-slate-500 bg-white p-1.5 rounded-lg border border-pink-100 font-mono direction-ltr text-left">
+            Output: ${item.output}
+          </div>
         `;
-        liveSubmissionsList.appendChild(item);
+        submissionsListContainer.appendChild(card);
       });
     }
 
-    // Teacher Broadcast Action: Send Task to All Connected Students Instantly
-    broadcastLiveBtn.addEventListener('click', async () => {
-      if (!window.LiveSync || !window.LiveSync.db) {
-        showTemporaryNotice("الاتصال بالسحابة قيد التجهيز...");
-        return;
-      }
-
-      const { db, appId, doc, setDoc } = window.LiveSync;
-      const room = getNormalizedRoomCode();
-
-      const taskData = {
-        title: teacherTaskTitleInput.value.trim() || "تحدي بايثون جديد",
-        difficulty: teacherDifficultySelect.value,
-        desc: teacherTaskDescInput.value.trim(),
-        starterCode: teacherStarterCodeInput.value,
-        expectedOutput: teacherExpectedOutputInput.value.trim(),
-        broadcastTime: Date.now(),
-        roomCode: room
-      };
-
-      try {
-        isTeacherBroadcasting = true;
-        broadcastLiveBtn.disabled = true;
-        broadcastLiveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>جارٍ البث المباشر...</span>';
-
-        const taskDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', room);
-        await setDoc(taskDocRef, taskData);
-
-        updateViewWithAssignment(taskData);
-        generateTeacherShareLink();
-
-        setTimeout(() => { isTeacherBroadcasting = false; }, 1000);
-        teacherModal.classList.add('hidden');
-        appendTerminal(`\n📡 تم بث السؤال الجديد بنجاح إلى الغرفة [${room}]! سيظهر لجميع الطالبات الآن 🌸`, 'success');
-      } catch (err) {
-        console.error("Broadcast failed:", err);
-        showTemporaryNotice("تعذر بث السؤال: " + err.message);
-      } finally {
-        broadcastLiveBtn.disabled = false;
-        broadcastLiveBtn.innerHTML = '<i class="fa-solid fa-tower-broadcast"></i> <span>بث السؤال لجميع الطالبات الآن ⚡</span>';
-      }
-    });
-
-    // Student Submits Realtime Solution to Teacher
-    async function submitSolutionToTeacherRealtime(name, sClass, code) {
-      if (!window.LiveSync || !window.LiveSync.db) return;
-
-      const { db, appId, doc, setDoc } = window.LiveSync;
-      const room = getNormalizedRoomCode();
-      const submissionId = `sub_${room}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
-
-      const payload = {
-        type: 'student_solution',
-        roomCode: room,
-        studentName: name,
-        studentClass: sClass,
-        taskTitle: currentAssignment.title,
-        code: code,
-        output: currentExecutionOutput.trim(),
-        timestamp: Date.now()
-      };
-
-      try {
-        const subDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'submissions', submissionId);
-        await setDoc(subDocRef, payload);
-        appendTerminal(`\n✨ تم تسجيل وإرسال حلكِ مباشرة إلى لوحة المعلمة في الغرفة [${room}] 🌸`, 'success');
-      } catch(err) {
-        console.warn("Realtime submission notice:", err);
-      }
-    }
-
-    // Connect / Change Room Button
-    connectRoomBtn.addEventListener('click', () => {
-      const room = getNormalizedRoomCode();
-      roomCodeInput.value = room;
-      setupRoomSubscription(room);
-      appendTerminal(`\n# تم الاتصال بالغرفة: [${room}]. أي سؤال تبثه المعلمة في هذه الغرفة سيصلكِ فوراً.`, 'system');
-    });
-
-    document.addEventListener('firebase-auth-ready', () => {
-      const initialRoom = getNormalizedRoomCode();
-      setupRoomSubscription(initialRoom);
-    });
-
-    function copyToClipboard(text) {
-      const tempInput = document.createElement('textarea');
-      tempInput.value = text;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      document.execCommand('copy');
-      document.body.removeChild(tempInput);
-    }
-
-    window.addEventListener('click', (e) => {
-      if (e.target === teacherModal) teacherModal.classList.add('hidden');
-      if (e.target === helpModal) helpModal.classList.add('hidden');
-      if (e.target === submissionModal) submissionModal.classList.add('hidden');
+    clearAllSubmissionsBtn.addEventListener('click', () => {
+      if (!loggedInTeacher) return;
+      // Clear ONLY this teacher's submissions
+      submissions = submissions.filter(s => s.teacherId !== loggedInTeacher.id);
+      updateSubmissionsUI();
     });
 
     window.onload = function() {
-      loadAssignmentFromURL();
-      initPyodideRuntime();
-      updateCodeView();
+      setupMobileTabs();
+      initPyodide();
+      initTeacherSelectOptions();
+      renderCurriculumLessonsList("العاشر");
 
-      // Check URL for explicit room parameter
+      // Check if URL contains secret teacher query (?teacher=1010)
       const urlParams = new URLSearchParams(window.location.search);
-      const urlRoom = urlParams.get('room');
-      if (urlRoom) {
-        roomCodeInput.value = urlRoom.toUpperCase();
+      const teacherParam = urlParams.get('teacher');
+      if (teacherParam && teachersDatabase[teacherParam]) {
+        teacherPinInput.value = teacherParam;
+        handleTeacherLogin();
       }
     };
   </script>
